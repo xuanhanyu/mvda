@@ -1,1 +1,1 @@
-# mvda
+# Multiview Discriminant Analysis Algorithms
