@@ -24,7 +24,7 @@ def within_class_vars(mv_Xs, y):
         S_rows = []
         for r in range(num_views):
             if j == r:
-                W = affinity(mv_Xs[j], algo='lle')
+                W = affinity(mv_Xs[j], algo='kernel')
                 s_jr = D - W
             else:
                 s_jr = -W
@@ -51,7 +51,7 @@ def between_class_vars(mv_Xs, y):
         S_rows = []
         for r in range(num_views):
             if j == r:
-                W = affinity(mv_Xs[j], algo='lle')
+                W = affinity(mv_Xs[j], algo='kernel')
             s_jr = mv_Xs[j].t() @ (W - B) @ mv_Xs[r]
             S_rows.append(s_jr)
         S_cols.append(torch.cat(S_rows, dim=1))
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     def main():
         import synthetics
-        mv_Xs, y = synthetics.dual_blobs_dataset()
+        mv_Xs, y = synthetics.single_blob_dataset()
 
         # kernelize
         from sklearn.metrics.pairwise import rbf_kernel as kernel

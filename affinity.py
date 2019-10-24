@@ -38,7 +38,7 @@ def affinity(X,
              n_neighbors=5,
              epsilon='auto',
              kernel='rbf', gamma=1,
-             lle_diag_fill=True,
+             lle_diag_fill=False,
              auto_row_norm=True,
              n_jobs=-1):
     """

@@ -64,7 +64,7 @@ def between_class_vars(mv_Xs, y, theta=1, gamma=1):
             s_jr = mv_Xs[j].t() @ s_jr @ mv_Xs[r]
             S_rows.append(s_jr)
         S_cols.append(torch.cat(S_rows, dim=1))
-    Sb = torch.eye(sum(dims)) + torch.cat(S_cols, dim=0)
+    Sb = torch.cat(S_cols, dim=0)  # + torch.eye(sum(dims))
     return Sb
 
 
@@ -92,11 +92,12 @@ if __name__ == '__main__':
         mv_Ks = [torch.tensor(kernel(mv_Xs[_])).float() if use_kernel else mv_Xs[_] for _ in range(len(mv_Xs))]
         dims = [Ks.shape[1] for Ks in mv_Ks]
 
-        Sw = within_class_vars(mv_Ks, y, alpha=0, beta=1)
+        Sw = within_class_vars(mv_Ks, y, alpha=1, beta=0)
         Sb = between_class_vars(mv_Ks, y, theta=1, gamma=0)
 
         solver = EPSolver()
         eigen_vecs = solver.solve(Sw, Sb)
+        W = eigen_vecs[:, :2]
         Ws = projections(eigen_vecs, dims)
         print('Projection matrices:', [W.shape for W in Ws])
 
@@ -105,6 +106,7 @@ if __name__ == '__main__':
         mv_Ys = group(mv_Ys, y)
         mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
 
+        print(torch.trace(W.t() @ within_class_vars(mv_Ks, y, alpha=0, beta=1) @ W))
         # plot
         from data_visualizer import DataVisualizer
         dv = DataVisualizer()

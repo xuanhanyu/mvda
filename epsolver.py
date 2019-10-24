@@ -4,7 +4,8 @@ import torch
 
 
 class EPSolver:
-    def __init__(self, algo='eig'):
+    def __init__(self, algo='eig', reg='auto'):
+        self.reg = reg
         if algo in ['eig', 'eigen']:
             self.solve = self.solve_eig
         elif algo == 'svd':
@@ -17,8 +18,12 @@ class EPSolver:
     def solve(self, Sw, Sb, argmin=False, *args, **kwargs):
         raise NotImplementedError('Define a solver')
 
-    def solve_eig(self, Sw, Sb, reg=1e-5, argmin=False):
-        W = (Sw + torch.eye(Sw.shape[0]) * reg).inverse() @ Sb
+    def solve_eig(self, Sw, Sb, argmin=False):
+        if self.reg == 'auto':
+            I_reg = torch.eye(Sw.shape[0]) * torch.trace(Sw) * 1e-4
+        else:
+            I_reg = torch.eye(Sw.shape[0]) * self.reg
+        W = (Sw + I_reg).inverse() @ Sb
         eigen_vals, eigen_vecs = torch.eig(W, eigenvectors=True)
         eigen_pairs = [[eigen_vals[i][0], eigen_vecs.t()[i]] for i in range(eigen_vals.shape[0])]
         eigen_pairs = sorted(eigen_pairs, key=lambda ep: torch.abs(ep[0]).item(), reverse=not argmin)
@@ -26,9 +31,12 @@ class EPSolver:
         # eigen_vals = torch.cat([eigen_pair[0].unsqueeze(0) for eigen_pair in eigen_pairs], dim=0)
         return eigen_vecs
 
-    def solve_svd(self, Sw, Sb, reg=1e-5, argmin=False):
-        W = (Sw + torch.eye(Sw.shape[0]) * reg).inverse() @ Sb
-        W += torch.eye(W.shape[0]) * reg
+    def solve_svd(self, Sw, Sb, argmin=False):
+        if self.reg == 'auto':
+            I_reg = torch.eye(Sw.shape[0]) * torch.trace(Sw) * 1e-4
+        else:
+            I_reg = torch.eye(Sw.shape[0]) * self.reg
+        W = (Sw + I_reg).inverse() @ Sb
         U, S, V = W.svd()
         return U[::-1] if argmin else U
 
