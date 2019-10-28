@@ -106,5 +106,4 @@ if __name__ == '__main__':
         dv.mv_scatter(mv_Ys)
         dv.show()
 
-
     main()
