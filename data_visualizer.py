@@ -61,7 +61,9 @@ class DataVisualizer:
             plt.grid(True)
             # plt.show()
 
-    def mv_scatter(self, Xs, ys=None, title=None):
+    def mv_scatter(self, Xs, y=None, title=None):
+        if y is not None:
+            Xs = DataVisualizer.__group__(Xs, y)
         dims = [Xs[0].shape[1] for Xs in Xs]
         max_dim = max(dims)
         if not self.pausing:
@@ -81,7 +83,7 @@ class DataVisualizer:
             self.fig.canvas.set_window_title(title)
 
         for v in range(len(Xs)):
-            labels = ys if ys is not None else np.arange(len(Xs[v]))
+            labels = y if y is not None else np.arange(len(Xs[v]))
             if dims[v] < max_dim:
                 Xs[v] = [np.array([np.concatenate([x, np.zeros(max_dim - dims[v])], axis=0) for x in X_i]) for X_i in
                          Xs[v]]
@@ -98,6 +100,8 @@ class DataVisualizer:
         self.ax.legend()
         self.ax.set_title('{}D feature space'.format(dims))
         plt.grid(True)
+        # if title is not None:
+        #     plt.savefig('img/' + title + '.jpg')
 
     def pause(self, interval=0.001):
         self.pausing = True
@@ -106,3 +110,11 @@ class DataVisualizer:
     def show(self, block=True):
         self.pausing = False
         plt.show(block=block)
+
+    @staticmethod
+    def __group__(Xs, y):
+        y_unique = np.unique(y)
+        Rs = []
+        for X in Xs:
+            Rs.append([X[np.where(y == c)[0]] for c in y_unique])
+        return Rs

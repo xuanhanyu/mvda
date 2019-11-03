@@ -3,6 +3,16 @@ import numpy as np
 import torch
 
 
+def new_dataset(n_classes=5, n_views=3, seed=None):
+    np.random.seed(seed)
+    X_ori, y = make_blobs(n_features=3, centers=n_classes)
+    Xs = [X_ori]
+    for i in range(n_views - 1):
+        Xs.append(np.array([x + np.random.rand(len(x.shape)) * 3 for x in (X_ori + np.random.randn(3) * 7)]))
+    # X_v3, _ = make_blobs(n_features=5, centers=3)
+    return [torch.tensor(X).float() for X in Xs], y
+
+
 def single_blob_dataset(seed=156):
     np.random.seed(seed)
     X_v1, y = make_blobs(n_features=3, centers=3)

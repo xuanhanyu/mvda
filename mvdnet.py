@@ -1,8 +1,7 @@
-from kmvda import within_class_vars, between_class_vars, group
+from mvda.mvda import within_class_vars, between_class_vars
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class SubNet(nn.Module):
@@ -63,7 +62,7 @@ if __name__ == '__main__':
         from data_visualizer import DataVisualizer
         dv = DataVisualizer()
 
-        mv_Xs, y = synthetics.dual_blobs_dataset()
+        mv_Xs, y = synthetics.new_dataset()
 
         dims = [Xs.shape[1] for Xs in mv_Xs]
         mvdnet = MvDNet(dims, 2)
@@ -74,7 +73,7 @@ if __name__ == '__main__':
         # print([H.shape for H in Hs])
 
         # plot
-        dv.mv_scatter(group(mv_Xs, y))
+        dv.mv_scatter(mv_Xs, y)
         dv.show(False)
 
         criterion = MvDALoss()
@@ -92,12 +91,10 @@ if __name__ == '__main__':
                 mv_Ys = mvdnet(mv_Xs)
                 mv_Ys = group(mv_Ys, y)
                 # mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
-                dv.mv_scatter(mv_Ys, title='Epoch: {}'.format(i + 1))
+                dv.mv_scatter(mv_Ys, title='{:03d}'.format(i + 1))
                 dv.pause()
 
             mvdnet.train()
-
         dv.show()
-
 
     main()
