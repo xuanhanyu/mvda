@@ -1,5 +1,5 @@
 from epsolver import EPSolver
-from affinity import affinity
+from mvda.utils.affinity import affinity
 import torch
 import numpy as np
 
