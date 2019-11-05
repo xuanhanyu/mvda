@@ -19,12 +19,12 @@ if __name__ == '__main__':
         # dv.mv_scatter(Xs_all, y_all)
         # dv.show()
 
-        mvmodel = MvDA(n_components=2048, ep='ldax', kernels='linear')
+        mvmodel = MvDA(n_components=512, ep='ldax', kernels='linear')
         Ys_train = mvmodel.fit_transform(Xs_train, y_train)
         Ys_test = mvmodel.transform(Xs_test)
         print(mvmodel.n_components)
 
         Ys_all, y_all = join_multiview_datasets([Ys_train, Ys_test], [y_train, y_test])
 
-        dv.mv_scatter(Ys_train, y_train)
+        dv.mv_scatter(Ys_all, y_all)
         dv.show()
