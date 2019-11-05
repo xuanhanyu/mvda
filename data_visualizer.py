@@ -1,10 +1,11 @@
 from mpl_toolkits.mplot3d import Axes3D
-from sklearn.manifold.t_sne import TSNE
 from scipy.stats import norm
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import itertools
+import torch
+
 matplotlib.use('GTK3Agg')
 
 
@@ -15,10 +16,14 @@ class DataVisualizer:
     linewidth = 0.1
     alpha = 0.5
 
-    def __init__(self, algo=TSNE):
-        self.manifold = algo
+    def __init__(self, embed_algo=None, embed_style='global', grid=True, legend=True):
+        assert embed_style in ['per_view', 'global']
+        self.manifold = embed_algo
+        self.manifold_style = embed_style
         self.scatter_params = {'linewidth': self.linewidth, 'alpha': self.alpha}
         self.pausing = False
+        self.grid = grid
+        self.legend = legend
         self.fig = self.ax = None
 
     def pdf(self, *args, transform):
@@ -46,26 +51,29 @@ class DataVisualizer:
                     X = tmp
                 fig, ax = plt.subplots()
                 for i, X_i in enumerate(X):
-                    ax.scatter(X_i[:, 0], X_i[:, 1], c=self.cmaps[i],
+                    ax.scatter(X_i[:, 0], X_i[:, 1],
+                               c=self.cmaps[i % len(self.cmaps)],
                                label=labels[i], **self.scatter_params)
             elif dim == 3:
                 fig = plt.figure()
                 ax = Axes3D(fig)
                 for i, X_i in enumerate(X):
-                    ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2], c=self.cmaps[i],
+                    ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2],
+                               c=self.cmaps[i % len(self.cmaps)],
                                label=labels[i], **self.scatter_params)
             else:
                 raise AttributeError('Unable to plot space of dimension greater than 3!')
-            ax.legend()
+            if self.legend: ax.legend()
             ax.set_title('{}D feature space'.format(dim))
-            plt.grid(True)
-            # plt.show()
+            plt.grid(self.grid)
 
-    def mv_scatter(self, Xs, y=None, title=None):
-        if y is not None:
-            Xs = DataVisualizer.__group__(Xs, y)
+    def mv_scatter(self, Xs, y, title=None):
+        if self.manifold is not None:
+            Xs = self.__embed__(Xs, y)
+        Xs = DataVisualizer.__group__(Xs, y)
         dims = [Xs[0].shape[1] for Xs in Xs]
         max_dim = max(dims)
+        assert 0 < max_dim <= 3
         if not self.pausing:
             if max_dim <= 2:
                 self.fig, self.ax = plt.subplots()
@@ -74,8 +82,6 @@ class DataVisualizer:
             elif max_dim == 3:
                 self.fig = plt.figure()
                 self.ax = Axes3D(self.fig)
-            else:
-                raise AttributeError('Unable to plot space of dimension greater than 3!')
             plt.rc('grid', linestyle="dotted", color='black', alpha=0.6)
         else:
             self.ax.clear()
@@ -89,19 +95,21 @@ class DataVisualizer:
                          Xs[v]]
             if max_dim <= 2:
                 for i, X_i in enumerate(Xs[v]):
-                    self.ax.scatter(X_i[:, 0], X_i[:, 1], c=self.cmaps[i % 12], marker=self.markers[v % 12],
+                    self.ax.scatter(X_i[:, 0], X_i[:, 1],
+                                    c=self.cmaps[i % len(self.cmaps)],
+                                    marker=self.markers[v % len(self.markers)],
                                     s=50, label=labels[i], **self.scatter_params)
             elif max_dim == 3:
                 for i, X_i in enumerate(Xs[v]):
-                    self.ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2], c=self.cmaps[i], marker=self.markers[v % 12],
+                    self.ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2],
+                                    c=self.cmaps[i % len(self.cmaps)],
+                                    marker=self.markers[v % len(self.markers)],
                                     s=50, label=labels[i], **self.scatter_params)
             else:
                 raise AttributeError('Unable to plot space of dimension greater than 3!')
-        self.ax.legend()
+        if self.legend: self.ax.legend()
         self.ax.set_title('{}D feature space'.format(dims))
-        plt.grid(True)
-        # if title is not None:
-        #     plt.savefig('img/' + title + '.jpg')
+        plt.grid(self.grid)
 
     def pause(self, interval=0.001):
         self.pausing = True
@@ -111,6 +119,9 @@ class DataVisualizer:
         self.pausing = False
         plt.show(block=block)
 
+    def save(self, file):
+        plt.savefig(file)
+
     @staticmethod
     def __group__(Xs, y):
         y_unique = np.unique(y)
@@ -118,3 +129,14 @@ class DataVisualizer:
         for X in Xs:
             Rs.append([X[np.where(y == c)[0]] for c in y_unique])
         return Rs
+
+    def __embed__(self, Xs, y):
+        if self.manifold_style == 'per_view':
+            return [self.manifold.fit_transform(X, y) for X in Xs]
+        elif self.manifold_style == 'global':
+            n_views = len(Xs)
+            X_globe = torch.cat(Xs)
+            y_globe = torch.cat([y for _ in range(n_views)])
+            X_mbed = self.manifold.fit_transform(X_globe, y_globe)
+            Xs = [X_mbed[int(len(X_mbed) / n_views * _):int(len(X_mbed) / n_views * (_ + 1))] for _ in range(n_views)]
+            return Xs

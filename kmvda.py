@@ -1,7 +1,6 @@
-from epsolver import EPSolver
-from mvda.utils.affinity import affinity
-import torch
+from mvda.utils import EPSolver
 import numpy as np
+import torch
 
 
 def class_vectors(y):
@@ -16,7 +15,7 @@ def within_class_vars(mv_Xs, y):
 
     W = torch.zeros(len(y), len(y))
     for ci in y_unique:
-        W += ecs[ci].unsqueeze(0).t() @ ecs[ci].unsqueeze(0)
+        W += ecs[ci].unsqueeze(0).t() @ ecs[ci].unsqueeze(0) / (torch.sum(ecs[ci]) * len(mv_Xs))
     D = torch.eye(len(y))
 
     S_cols = []
@@ -24,10 +23,11 @@ def within_class_vars(mv_Xs, y):
         S_rows = []
         for r in range(num_views):
             if j == r:
-                W = affinity(mv_Xs[j], algo='kernel')
                 s_jr = D - W
             else:
                 s_jr = -W
+            if j == r == 1:
+                print(mv_Xs[j].t() @ W @ mv_Xs[r])
             s_jr = mv_Xs[j].t() @ s_jr @ mv_Xs[r]
             S_rows.append(s_jr)
         S_cols.append(torch.cat(S_rows, dim=1))
@@ -43,15 +43,13 @@ def between_class_vars(mv_Xs, y):
     n = len(mv_Xs) * mv_Xs[0].shape[0]
     W = torch.zeros(len(y), len(y))
     for ci in y_unique:
-        W += ecs[ci].unsqueeze(0).t() @ ecs[ci].unsqueeze(0)
+        W += ecs[ci].unsqueeze(0).t() @ ecs[ci].unsqueeze(0) / (torch.sum(ecs[ci]) * len(mv_Xs))
     B = torch.ones(len(y), len(y)) / n
 
     S_cols = []
     for j in range(num_views):
         S_rows = []
         for r in range(num_views):
-            if j == r:
-                W = affinity(mv_Xs[j], algo='kernel')
             s_jr = mv_Xs[j].t() @ (W - B) @ mv_Xs[r]
             S_rows.append(s_jr)
         S_cols.append(torch.cat(S_rows, dim=1))
@@ -72,11 +70,11 @@ def group(mv_Ds, y):
 
 
 if __name__ == '__main__':
-    use_kernel = False
+    use_kernel = True
 
     def main():
         import synthetics
-        mv_Xs, y = synthetics.single_blob_dataset()
+        mv_Xs, y = synthetics.gaussian_dataset()
 
         # kernelize
         from sklearn.metrics.pairwise import rbf_kernel as kernel
@@ -86,7 +84,7 @@ if __name__ == '__main__':
         Sw = within_class_vars(mv_Ks, y)
         Sb = between_class_vars(mv_Ks, y)
 
-        solver = EPSolver(algo='eig')
+        solver = EPSolver()
         eigen_vecs = solver.solve(Sw, Sb)
         Ws = projections(eigen_vecs, dims)
         print('Projection matrices:', [W.shape for W in Ws])

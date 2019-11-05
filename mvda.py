@@ -1,4 +1,4 @@
-from epsolver import EPSolver
+from mvda.utils.epsolver import EPSolver
 import torch
 import numpy as np
 

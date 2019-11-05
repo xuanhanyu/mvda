@@ -1,4 +1,4 @@
-from mvda.mvda import within_class_vars, between_class_vars
+from mvda.objectives import *
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
@@ -49,8 +49,8 @@ class MvDALoss(nn.Module):
         super(MvDALoss, self).__init__()
 
     def forward(self, Hs, Ws, y):
-        Sw = within_class_vars(Hs, y)
-        Sb = between_class_vars(Hs, y)
+        Sw = MvDAIntraScatter().fit(Hs, y).target()
+        Sb = ClassSeparating().fit(Hs, y).target()
         W = torch.cat(Ws, dim=1)
         return torch.trace(W @ Sw @ W.t()) / torch.trace(W @ Sb @ W.t())
 
@@ -89,9 +89,8 @@ if __name__ == '__main__':
             mvdnet.eval()
             with torch.no_grad():
                 mv_Ys = mvdnet(mv_Xs)
-                mv_Ys = group(mv_Ys, y)
                 # mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
-                dv.mv_scatter(mv_Ys, title='{:03d}'.format(i + 1))
+                dv.mv_scatter(mv_Ys, y, title='{:03d}'.format(i + 1))
                 dv.pause()
 
             mvdnet.train()
