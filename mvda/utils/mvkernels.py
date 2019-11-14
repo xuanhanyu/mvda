@@ -17,19 +17,19 @@ class MvKernels(TensorUser):
     def __init__(self, kernels):
         self.kernels = kernels
         self._Ls = self.n_views = None
-        self.activated = []
+        self.statuses = []
         self.is_fit = False
 
     def __infer_kernels__(self, Xs):
         self.n_views = len(Xs)
-        self.activated = [True for _ in range(self.n_views)]
+        self.statuses = [True for _ in range(self.n_views)]
         if not isinstance(self.kernels, list):
             self.kernels = [self.kernels for _ in range(self.n_views)]
         for ki in range(self.n_views):
             kernel = self.kernels[ki]
             if kernel is None:
                 self.kernels[ki] = lambda x, l: x
-                self.activated[ki] = False
+                self.statuses[ki] = False
             if isinstance(kernel, str):
                 kernel = kernel.lower()
                 if kernel in ['lin', 'linear']:
@@ -49,7 +49,7 @@ class MvKernels(TensorUser):
                 elif kernel in ['none']:
                     # None
                     self.kernels[ki] = lambda x, l: x
-                    self.activated[ki] = False
+                    self.statuses[ki] = False
                 elif kernel in ['precomputed']:
                     # Precomputed
                     self.kernels[ki] = lambda x, l: x
@@ -62,7 +62,7 @@ class MvKernels(TensorUser):
         if not self.is_fit:
             self.__infer_kernels__(Xs)
             self.is_fit = True
-        self._Ls = [Xs[_].data.clone() if self.activated[_] else None for _ in range(self.n_views)]
+        self._Ls = [Xs[_].data.clone() if self.statuses[_] else None for _ in range(self.n_views)]
 
     def fit_transform(self, Xs):
         self.fit(Xs)
@@ -75,6 +75,6 @@ class MvKernels(TensorUser):
     @property
     def all_activated(self):
         ret = True
-        for status in self.activated:
+        for status in self.statuses:
             ret &= status
         return ret

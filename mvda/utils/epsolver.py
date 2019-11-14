@@ -15,7 +15,8 @@ ENGINE = None
 
 class EPSolver:
 
-    def __init__(self, algo='eig', reg='auto', implementation='matlab'):
+    def __init__(self, algo='eig', reg='auto', implementation='pytorch'):
+        assert algo in ['eig', 'eigen', 'svd', 'ldax']
         assert implementation in ['pytorch', 'scipy', 'numpy', 'matlab']
         global ENGINE
         self.implementation = implementation
@@ -25,10 +26,10 @@ class EPSolver:
         elif algo == 'svd':
             self.solve = self.solve_svd
         elif algo == 'ldax':
-            # raise ChildProcessError('LDAX_SwSb.p solver is very unreliable!'
+            # raise ChildProcessError('LDAX_SwSb.p solver can be unreliable!'
             #                         'I don\'t know why they have to hide their source code.'
-            #                         'I can not debug their faults, consider using others.')
-            print('[EPSolver] Initializing matlab engine')
+            #                         'Their code are\'nt even NASA
+            #                         'How can I debug in case of malfunctioning.')
             self.solve = self.solve_ldax
             self.implementation = 'matlab'
 
@@ -41,6 +42,7 @@ class EPSolver:
             if ENGINE is not None:
                 self.engine = ENGINE
             else:
+                print('[EPSolver] Initializing matlab engine')
                 self.engine = matlab.engine.start_matlab()
                 self.engine.addpath(os.path.join(os.path.dirname(__file__), 'matlab'))
                 ENGINE = self.engine
@@ -58,13 +60,13 @@ class EPSolver:
             # epairs = [[evals[_][0], evecs.t()[_]] for _ in range(evals.shape[0])]
             # epairs = sorted(epairs, key=lambda ep: torch.abs(ep[0]).item(), reverse=not argmin)
             # evecs = torch.cat([eigen_pair[1].unsqueeze(0) for eigen_pair in epairs], dim=0).t()
-            evecs = evecs[:, torch.argsort(evals[:, 0].t().squeeze(), descending=not argmin)]
+            evecs = evecs[:, torch.argsort(evals[:, 0].abs(), descending=not argmin)]
             return evecs
         elif self.implementation in ['scipy', 'numpy']:
             Sw, Sb = self.__numpify__(Sw, Sb)
             self._W = self.linalg.inv(self.__regularize__(Sw)) @ Sb
             evals, evecs = self.linalg.eig(self._W)
-            order = np.argsort(evals)[::-1] if not argmin else np.argsort(evals)
+            order = np.argsort(np.abs(evals))[::-1] if not argmin else np.argsort(np.abs(evals))
             evecs = evecs.real[:, order]
             return torch.from_numpy(evecs.astype(np.float32))
         elif self.implementation == 'matlab':

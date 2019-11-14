@@ -70,11 +70,11 @@ def group(mv_Ds, y):
 
 
 if __name__ == '__main__':
-    use_kernel = True
+    use_kernel = False
 
     def main():
         import synthetics
-        mv_Xs, y = synthetics.gaussian_dataset()
+        mv_Xs, y = synthetics.single_blob_dataset()
 
         # kernelize
         from sklearn.metrics.pairwise import rbf_kernel as kernel
@@ -90,15 +90,13 @@ if __name__ == '__main__':
         print('Projection matrices:', [W.shape for W in Ws])
 
         # transform
-        mv_Ys = [(Ws[_].t() @ mv_Ks[_].t()).t() for _ in range(len(mv_Ks))]
-        mv_Ys = group(mv_Ys, y)
-        mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
+        mv_Ys = [(Ws[_].t() @ mv_Ks[_].t()).t()[:, :2] for _ in range(len(mv_Ks))]
 
         # plot
         from data_visualizer import DataVisualizer
         dv = DataVisualizer()
-        dv.mv_scatter(group(mv_Xs, y))
-        dv.mv_scatter(mv_Ys)
+        dv.mv_scatter(mv_Xs, y)
+        dv.mv_scatter(mv_Ys, y)
         dv.show()
 
     main()

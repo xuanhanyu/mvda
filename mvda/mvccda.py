@@ -9,11 +9,13 @@ class MvCCDA(MvDAlgoBase):
                  n_components='auto',
                  ep='eig',
                  reg='auto',
-                 kernels=None):
+                 kernels=None,
+                 *args, **kwargs):
         super(MvCCDA, self).__init__(n_components=n_components,
                                      ep=ep,
                                      reg=reg,
-                                     kernels=kernels)
+                                     kernels=kernels,
+                                     *args, **kwargs)
         self.cco = CommonComponent()
         self.sbo = MvDAInterScatter()
 
@@ -31,11 +33,13 @@ class MvDCCCDA(MvDAlgoBase):
                  n_components='auto',
                  ep='eig',
                  reg='auto',
-                 kernels=None):
+                 kernels=None,
+                 *args, **kwargs):
         super(MvDCCCDA, self).__init__(n_components=n_components,
                                        ep=ep,
                                        reg=reg,
-                                       kernels=kernels)
+                                       kernels=kernels,
+                                       *args, **kwargs)
         self.cco = CommonComponent()
         self.dco = DifferingClass()
 

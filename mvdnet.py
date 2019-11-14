@@ -62,7 +62,7 @@ if __name__ == '__main__':
         from data_visualizer import DataVisualizer
         dv = DataVisualizer()
 
-        mv_Xs, y = synthetics.new_dataset()
+        mv_Xs, y = synthetics.random_dataset()
 
         dims = [Xs.shape[1] for Xs in mv_Xs]
         mvdnet = MvDNet(dims, 2)

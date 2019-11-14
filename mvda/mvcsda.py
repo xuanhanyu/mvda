@@ -9,11 +9,13 @@ class MvCSDA(MvDAlgoBase):
                  n_components='auto',
                  ep='eig',
                  reg='auto',
-                 kernels=None):
+                 kernels=None,
+                 *args, **kwargs):
         super(MvCSDA, self).__init__(n_components=n_components,
                                      ep=ep,
                                      reg=reg,
-                                     kernels=kernels)
+                                     kernels=kernels,
+                                     *args, **kwargs)
         self.swo = MvDAIntraScatter()
         self.cso = ClassSeparating()
 
@@ -32,11 +34,13 @@ class MvDAplusCS(MvDAlgoBase):
                  ep='eig',
                  reg='auto',
                  kernels=None,
-                 lambda_cs=1.):
+                 lambda_cs=1.,
+                 *args, **kwargs):
         super(MvDAplusCS, self).__init__(n_components=n_components,
                                          ep=ep,
                                          reg=reg,
-                                         kernels=kernels)
+                                         kernels=kernels,
+                                         *args, **kwargs)
         self.lambda_cs = lambda_cs
         self.swo = MvDAIntraScatter()
         self.sbo = MvDAInterScatter()

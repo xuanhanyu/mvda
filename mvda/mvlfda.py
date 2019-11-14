@@ -14,13 +14,26 @@ class MvLFDA(MvDAlgoBase):
                  n_neighbors=5,
                  epsilon='auto',
                  affinity_kernel='rbf',
-                 gamma=1):
+                 gamma=1,
+                 lambda_lc=1.0,
+                 *args, **kwargs):
         super(MvLFDA, self).__init__(n_components=n_components,
                                      ep=ep,
                                      reg=reg,
-                                     kernels=kernels)
-        self.swo = MvLFDAIntraScatter(affinity_type, n_neighbors, epsilon, affinity_kernel, gamma)
-        self.sbo = MvLFDAInterScatter(affinity_type, n_neighbors, epsilon, affinity_kernel, gamma)
+                                     kernels=kernels,
+                                     *args, **kwargs)
+        self.swo = MvLFDAIntraScatter(affinity_type=affinity_type,
+                                      n_neighbors=n_neighbors,
+                                      epsilon=epsilon,
+                                      affinity_kernel=affinity_kernel,
+                                      gamma=gamma,
+                                      lambda_lc=lambda_lc)
+        self.sbo = MvLFDAInterScatter(affinity_type=affinity_type,
+                                      n_neighbors=n_neighbors,
+                                      epsilon=epsilon,
+                                      affinity_kernel=affinity_kernel,
+                                      gamma=gamma,
+                                      lambda_lc=lambda_lc)
 
     def _Sw_(self):
         return self.swo.target()
@@ -42,7 +55,8 @@ class MvLFDAvc(MvLFDA):
                  epsilon='auto',
                  affinity_kernel='rbf',
                  gamma=1,
-                 lambda_vc=0.01):
+                 lambda_lc=1.0, lambda_vc=0.01,
+                 *args, **kwargs):
         super(MvLFDAvc, self).__init__(n_components=n_components,
                                        ep=ep,
                                        reg=reg,
@@ -51,12 +65,15 @@ class MvLFDAvc(MvLFDA):
                                        n_neighbors=n_neighbors,
                                        epsilon=epsilon,
                                        affinity_kernel=affinity_kernel,
-                                       gamma=gamma)
+                                       gamma=gamma,
+                                       lambda_lc=lambda_lc,
+                                       *args, **kwargs)
         self.lambda_vc = lambda_vc
         self.vco = ViewConsistency(reg=reg)
 
     def calculate_objectives(self):
-        self.Sw = self._Sw_() + self.lambda_vc * self.vco.target()
+        self.Sw = self._Sw_()
+        self.Sw += self.lambda_vc * (self.Sw.trace() / self.vco.target().trace()) * self.vco.target()
         self.Sb = self._Sb_()
 
 
@@ -73,7 +90,8 @@ class RMvLFDA(MvLFDA):
                  epsilon='auto',
                  affinity_kernel='rbf',
                  gamma=1,
-                 lambda_reg=0.1):
+                 lambda_lc=1.0, lambda_reg=0.1,
+                 *args, **kwargs):
         super(RMvLFDA, self).__init__(n_components=n_components,
                                       ep=ep,
                                       reg=reg,
@@ -82,7 +100,9 @@ class RMvLFDA(MvLFDA):
                                       n_neighbors=n_neighbors,
                                       epsilon=epsilon,
                                       affinity_kernel=affinity_kernel,
-                                      gamma=gamma)
+                                      gamma=gamma,
+                                      lambda_lc=lambda_lc,
+                                      *args, **kwargs)
         self.lambda_reg = lambda_reg
         self.ro = Regularization()
 
@@ -104,7 +124,8 @@ class RMvLFDAvc(MvLFDAvc):
                  epsilon='auto',
                  affinity_kernel='rbf',
                  gamma=1,
-                 lambda_vc=0.01, lambda_reg=0.1):
+                 lambda_lc=1.0, lambda_vc=0.01, lambda_reg=0.1,
+                 *args, **kwargs):
         super(RMvLFDAvc, self).__init__(n_components=n_components,
                                         ep=ep,
                                         reg=reg,
@@ -114,7 +135,8 @@ class RMvLFDAvc(MvLFDAvc):
                                         epsilon=epsilon,
                                         affinity_kernel=affinity_kernel,
                                         gamma=gamma,
-                                        lambda_vc=lambda_vc)
+                                        lambda_lc=lambda_lc, lambda_vc=lambda_vc,
+                                        *args, **kwargs)
         self.lambda_reg = lambda_reg
         self.ro = Regularization()
 

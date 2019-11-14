@@ -17,7 +17,9 @@ class DataVisualizer:
     alpha = 0.5
 
     def __init__(self, embed_algo=None, embed_style='global', grid=True, legend=True):
-        assert embed_style in ['per_view', 'global']
+        if embed_algo is not None and (hasattr(embed_algo, 'n_components') and embed_algo.n_components > 3):
+            raise AssertionError
+        assert embed_algo is None or embed_style in ['per_view', 'global']
         self.manifold = embed_algo
         self.manifold_style = embed_style
         self.scatter_params = {'linewidth': self.linewidth, 'alpha': self.alpha}
@@ -68,11 +70,12 @@ class DataVisualizer:
             plt.grid(self.grid)
 
     def mv_scatter(self, Xs, y, title=None):
-        if self.manifold is not None:
+        ori_dims = torch.tensor([X.shape[1] for X in Xs])
+        if self.manifold is not None and self.manifold.n_components < torch.max(ori_dims):
             Xs = self.__embed__(Xs, y)
+        dims = torch.tensor([X.shape[1] for X in Xs])
+        max_dim = torch.max(dims)
         Xs = DataVisualizer.__group__(Xs, y)
-        dims = [Xs[0].shape[1] for Xs in Xs]
-        max_dim = max(dims)
         assert 0 < max_dim <= 3
         if not self.pausing:
             if max_dim <= 2:
@@ -108,7 +111,11 @@ class DataVisualizer:
             else:
                 raise AttributeError('Unable to plot space of dimension greater than 3!')
         if self.legend: self.ax.legend()
-        self.ax.set_title('{}D feature space'.format(dims))
+
+        if (ori_dims == dims).all():
+            self.ax.set_title('{}D feature space'.format(dims.tolist()))
+        else:
+            self.ax.set_title('{}D embeddings of {}D feature space'.format(dims.tolist(), ori_dims.tolist()))
         plt.grid(self.grid)
 
     def pause(self, interval=0.001):

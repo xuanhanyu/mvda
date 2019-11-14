@@ -9,11 +9,13 @@ class MvDA(MvDAlgoBase):
                  n_components='auto',
                  ep='eig',
                  reg='auto',
-                 kernels=None):
+                 kernels=None,
+                 *args, **kwargs):
         super(MvDA, self).__init__(n_components=n_components,
                                    ep=ep,
                                    reg=reg,
-                                   kernels=kernels)
+                                   kernels=kernels,
+                                   *args, **kwargs)
         self.swo = MvDAIntraScatter()
         self.sbo = MvDAInterScatter()
 
@@ -32,11 +34,13 @@ class MvDAvc(MvDA):
                  ep='eig',
                  reg='auto',
                  kernels=None,
-                 lambda_vc=0.01):
+                 lambda_vc=0.01,
+                 *args, **kwargs):
         super(MvDAvc, self).__init__(n_components=n_components,
                                      ep=ep,
                                      reg=reg,
-                                     kernels=kernels)
+                                     kernels=kernels,
+                                     *args, **kwargs)
         self.lambda_vc = lambda_vc
         self.vco = ViewConsistency(reg=reg)
 
@@ -53,11 +57,13 @@ class RMvDA(MvDA):
                  ep='eig',
                  reg='auto',
                  kernels=None,
-                 lambda_reg=0.1):
+                 lambda_reg=0.1,
+                 *args, **kwargs):
         super(RMvDA, self).__init__(n_components=n_components,
                                     ep=ep,
                                     reg=reg,
-                                    kernels=kernels)
+                                    kernels=kernels,
+                                    *args, **kwargs)
         self.lambda_reg = lambda_reg
         self.ro = Regularization()
 
@@ -74,12 +80,14 @@ class RMvDAvc(MvDAvc):
                  ep='eig',
                  reg='auto',
                  kernels=None,
-                 lambda_vc=0.01, lambda_reg=0.1):
+                 lambda_vc=0.01, lambda_reg=0.1,
+                 *args, **kwargs):
         super(RMvDAvc, self).__init__(n_components=n_components,
                                       ep=ep,
                                       reg=reg,
                                       kernels=kernels,
-                                      lambda_vc=lambda_vc)
+                                      lambda_vc=lambda_vc,
+                                      *args, **kwargs)
         self.lambda_reg = lambda_reg
         self.ro = Regularization()
 

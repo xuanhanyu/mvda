@@ -21,7 +21,6 @@ class MvDAIntraScatter(MvDObjectiveBase):
         for j in range(self.n_views):
             S_rows = []
             for r in range(self.n_views):
-                print(self, j, r)
                 if j == r:
                     s_jr = D - W
                 else:
@@ -49,7 +48,6 @@ class MvDAInterScatter(MvDObjectiveBase):
         for j in range(self.n_views):
             S_rows = []
             for r in range(self.n_views):
-                print(self, j, r)
                 s_jr = self._Xs[j].t() @ (W - B) @ self._Xs[r]
                 S_rows.append(s_jr)
             S_cols.append(torch.cat(S_rows, dim=1))
@@ -64,7 +62,8 @@ class ViewConsistency(MvDObjectiveBase):
     def __init__(self, reg='auto'):
         super(ViewConsistency, self).__init__(predicate='minimize')
         self.reg = reg
-        self.Ireg = torch.eye(self.n_samples) * self.reg if not self.reg == 'auto' else None
+        if not self.reg == 'auto':
+            self.Ireg = torch.eye(self.n_samples) * self.reg
 
     def __regularize__(self, mat):
         if self.reg == 'auto':
@@ -79,14 +78,14 @@ class ViewConsistency(MvDObjectiveBase):
             S_rows = []
             for r in range(self.n_views):
                 if j == r:
-                    k_j = self._Xs[j] @ self._Xs[j].t() if not self.kernels.activated[j] else self._Xs[j]
+                    k_j = self._Xs[j] @ self._Xs[j].t() if not self.kernels.statuses[j] else self._Xs[j]
 
                     # vc_jj = self._Xs[j] @ self._Xs[j].t() @ self._Xs[j] @ self._Xs[j].t()
                     vc_jj = self.__regularize__(k_j @ k_j)
                     vc_jr = 2 * self.n_views * vc_jj.inverse() - 2 * vc_jj.inverse()
                 else:
-                    k_j = self._Xs[j] @ self._Xs[j].t() if not self.kernels.activated[j] else self._Xs[j]
-                    k_r = self._Xs[r] @ self._Xs[r].t() if not self.kernels.activated[r] else self._Xs[r]
+                    k_j = self._Xs[j] @ self._Xs[j].t() if not self.kernels.statuses[j] else self._Xs[j]
+                    k_r = self._Xs[r] @ self._Xs[r].t() if not self.kernels.statuses[r] else self._Xs[r]
 
                     # vc_jr = self._Xs[r] @ self._Xs[r].t() @ self._Xs[j] @ self._Xs[j].t()
                     vc_jr = self.__regularize__(k_r @ k_j)
@@ -130,7 +129,13 @@ class ClassSeparating(MvDObjectiveBase):
 # ------------------------------------
 class MvLFDAIntraScatter(MvDObjectiveBase):
 
-    def __init__(self, affinity_type='kernel', n_neighbors=5, epsilon='auto', affinity_kernel='rbf', gamma=1):
+    def __init__(self,
+                 affinity_type='kernel',
+                 n_neighbors=5,
+                 epsilon='auto',
+                 affinity_kernel='rbf',
+                 gamma=1,
+                 lambda_lc=1.0):
         super(MvLFDAIntraScatter, self).__init__(predicate='minimize')
         self.affinity_params = {
             'algo': affinity_type,
@@ -139,20 +144,25 @@ class MvLFDAIntraScatter(MvDObjectiveBase):
             'kernel': affinity_kernel,
             'gamma': gamma
         }
+        self.lambda_lc = lambda_lc
 
     def _O_(self):
         W = torch.zeros(self.n_samples, self.n_samples)
         for ci in self._y_unique:
-            W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0)
+            W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0) / (torch.sum(self.ecs[ci]) * self.n_views)
         D = torch.eye(self.n_samples)
+        # W = torch.zeros(self.n_samples, self.n_samples)
+        # for ci in self._y_unique:
+        #     W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0)
+        # D = torch.eye(self.n_samples)
 
         S_cols = []
         for j in range(self.n_views):
             S_rows = []
             for r in range(self.n_views):
+                W_af = self.__localize__(W, j)
                 if j == r:
-                    W = affinity(self._Xs[j], **self.affinity_params)
-                    s_jr = D - W
+                    s_jr = D - W_af
                 else:
                     s_jr = -W
                 s_jr = self._Xs[j].t() @ s_jr @ self._Xs[r]
@@ -160,10 +170,19 @@ class MvLFDAIntraScatter(MvDObjectiveBase):
             S_cols.append(torch.cat(S_rows, dim=1))
         return torch.cat(S_cols, dim=0)
 
+    def __localize__(self, W, j):
+        return (1.0 - self.lambda_lc) * W + self.lambda_lc * affinity(self._Xs[j], **self.affinity_params)
+
 
 class MvLFDAInterScatter(MvDObjectiveBase):
 
-    def __init__(self, affinity_type='kernel', n_neighbors=5, epsilon='auto', affinity_kernel='rbf', gamma=1):
+    def __init__(self,
+                 affinity_type='kernel',
+                 n_neighbors=5,
+                 epsilon='auto',
+                 affinity_kernel='rbf',
+                 gamma=1,
+                 lambda_lc=1.0):
         super(MvLFDAInterScatter, self).__init__(predicate='maximize')
         self.affinity_params = {
             'algo': affinity_type,
@@ -172,25 +191,32 @@ class MvLFDAInterScatter(MvDObjectiveBase):
             'kernel': affinity_kernel,
             'gamma': gamma
         }
+        self.lambda_lc = lambda_lc
 
     def _O_(self):
-        print(self.kernels.activated)
         n = self.n_views * self.n_samples
         W = torch.zeros(self.n_samples, self.n_samples)
         for ci in self._y_unique:
-            W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0)
+            W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0) / (torch.sum(self.ecs[ci]) * len(self._Xs))
         B = torch.ones(self.n_samples, self.n_samples) / n
+        # n = self.n_views * self.n_samples
+        # W = torch.zeros(self.n_samples, self.n_samples)
+        # for ci in self._y_unique:
+        #     W += self.ecs[ci].unsqueeze(0).t() @ self.ecs[ci].unsqueeze(0)
+        # B = torch.ones(self.n_samples, self.n_samples) / n
 
         S_cols = []
         for j in range(self.n_views):
             S_rows = []
             for r in range(self.n_views):
-                if j == r:
-                    W = affinity(self._Xs[j], **self.affinity_params)
-                s_jr = self._Xs[j].t() @ (W - B) @ self._Xs[r]
+                W_af = self.__localize__(W, j)
+                s_jr = self._Xs[j].t() @ (W_af - B) @ self._Xs[r]
                 S_rows.append(s_jr)
             S_cols.append(torch.cat(S_rows, dim=1))
         return torch.cat(S_cols, dim=0)
+
+    def __localize__(self, W, j):
+        return (1.0 - self.lambda_lc) * W + self.lambda_lc * affinity(self._Xs[j], **self.affinity_params)
 
 
 # ------------------------------------

@@ -1,5 +1,5 @@
-from epsolver import EPSolver
-from affinity import affinity
+from mvda.utils import EPSolver
+from mvda.utils import affinity
 import torch
 import numpy as np
 
@@ -86,21 +86,19 @@ if __name__ == '__main__':
         Sw = within_class_vars(mv_Ks, y)
         Sb = between_class_vars(mv_Ks, y)
 
-        solver = EPSolver(algo='eig')
+        solver = EPSolver(algo='eig', implementation='pytorch')
         eigen_vecs = solver.solve(Sw, Sb)
         Ws = projections(eigen_vecs, dims)
         print('Projection matrices:', [W.shape for W in Ws])
 
         # transform
-        mv_Ys = [(Ws[_].t() @ mv_Ks[_].t()).t() for _ in range(len(mv_Ks))]
-        mv_Ys = group(mv_Ys, y)
-        mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
+        mv_Ys = [(Ws[_].t() @ mv_Ks[_].t()).t()[:, :2] for _ in range(len(mv_Ks))]
 
         # plot
         from data_visualizer import DataVisualizer
         dv = DataVisualizer()
-        dv.mv_scatter(group(mv_Xs, y))
-        dv.mv_scatter(mv_Ys)
+        dv.mv_scatter(mv_Xs, y)
+        dv.mv_scatter(mv_Ys, y)
         dv.show()
 
     main()
