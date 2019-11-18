@@ -1,18 +1,19 @@
-from .bases import MvDAlgoBase
+from .bases import BaseMvDAlgo
 from .objectives import MvDAInterScatter, CommonComponent, DifferingClass
 
 
-class MvCCDA(MvDAlgoBase):
-    name = 'Multi-view Common Component Discriminant Analysis'
+class MvCCDA(BaseMvDAlgo):
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  *args, **kwargs):
         super(MvCCDA, self).__init__(n_components=n_components,
-                                     ep=ep,
+                                     ep_algo=ep_algo,
+                                     ep_implementation=ep_implementation,
                                      reg=reg,
                                      kernels=kernels,
                                      *args, **kwargs)
@@ -26,17 +27,18 @@ class MvCCDA(MvDAlgoBase):
         return self.sbo.target()
 
 
-class MvDCCCDA(MvDAlgoBase):
-    name = 'Multi-view Differing Class Common Component Discriminant Analysis'
+class MvDCCCDA(BaseMvDAlgo):
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  *args, **kwargs):
         super(MvDCCCDA, self).__init__(n_components=n_components,
-                                       ep=ep,
+                                       ep_algo=ep_algo,
+                                       ep_implementation=ep_implementation,
                                        reg=reg,
                                        kernels=kernels,
                                        *args, **kwargs)

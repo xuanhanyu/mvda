@@ -30,7 +30,7 @@ def eval_multiview_model(mvmodel, clf, Xs_train, y_train, Xs_test, y_test, retur
 
 if __name__ == '__main__':
     visualize = True
-    Xs, y = synthetics.random_dataset(n_views=5, n_classes=9, n_features=3, seed=107)  # 107
+    Xs, y = synthetics.single_blob_dataset(n_classes=5, n_views=3, n_features=3, seed=107)  # 107
     dv = DataVisualizer(embed_algo=TSNE(n_components=3), embed_style='global', legend=False)
     n_views = len(Xs)
     Xs_train, y_train, Xs_test, y_test = multiview_train_test_split(Xs, y)
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     Xs_all, y_all = join_multiview_datasets([Xs_train, Xs_test], [y_train, y_test])
     dv.mv_scatter(Xs_all, y_all, title='Original space')
 
-    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDA(n_components=2, ep='eig', kernels='linear'),
+    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDA(n_components=2, ep_algo='svd', ep_implementation='matlab', kernels='linear'),
                                                          clf=KNeighborsClassifier(),
                                                          Xs_train=Xs_train, y_train=y_train,
                                                          Xs_test=Xs_test, y_test=y_test,
@@ -48,25 +48,25 @@ if __name__ == '__main__':
     Ys_all = join_multiview_datasets([Ys_train, Ys_test])
     dv.mv_scatter(Ys_all, y_all, title='Projected space MvDA')
 
-    mv_scores2, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvCSDA(n_components=2, ep='eig', kernels='linear'),
-                                                         clf=KNeighborsClassifier(),
-                                                         Xs_train=Xs_train, y_train=y_train,
-                                                         Xs_test=Xs_test, y_test=y_test,
-                                                         return_projected=True)
-    print('Projected space MvCSDA', mv_scores2, sep='\n', end='\n\n')
-    Ys_all = join_multiview_datasets([Ys_train, Ys_test])
-    dv.mv_scatter(Ys_all, y_all, title='Projected space MvCSDA')
-
-    mv_scores3, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvLFDA(n_components=2, ep='eig', kernels='linear', lambda_lc=0.05),
-                                                         clf=KNeighborsClassifier(),
-                                                         Xs_train=Xs_train, y_train=y_train,
-                                                         Xs_test=Xs_test, y_test=y_test,
-                                                         return_projected=True)
-    print('Projected space MvLFDA', mv_scores3, sep='\n', end='\n\n')
-    Ys_all = join_multiview_datasets([Ys_train, Ys_test])
-    dv.mv_scatter(Ys_all, y_all, title='Projected space MvLFDA')
+    # mv_scores2, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvCSDA(n_components=2, ep='eig', kernels='linear'),
+    #                                                      clf=KNeighborsClassifier(),
+    #                                                      Xs_train=Xs_train, y_train=y_train,
+    #                                                      Xs_test=Xs_test, y_test=y_test,
+    #                                                      return_projected=True)
+    # print('Projected space MvCSDA', mv_scores2, sep='\n', end='\n\n')
+    # Ys_all = join_multiview_datasets([Ys_train, Ys_test])
+    # dv.mv_scatter(Ys_all, y_all, title='Projected space MvCSDA')
+    #
+    # mv_scores3, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvLFDA(n_components=2, ep='eig', kernels='linear', lambda_lc=0.05),
+    #                                                      clf=KNeighborsClassifier(),
+    #                                                      Xs_train=Xs_train, y_train=y_train,
+    #                                                      Xs_test=Xs_test, y_test=y_test,
+    #                                                      return_projected=True)
+    # print('Projected space MvLFDA', mv_scores3, sep='\n', end='\n\n')
+    # Ys_all = join_multiview_datasets([Ys_train, Ys_test])
+    # dv.mv_scatter(Ys_all, y_all, title='Projected space MvLFDA')
 
     # np.savetxt("gesturefair_mvda_4096.csv", mv_scores, delimiter=",")
-    print(mv_scores2 == mv_scores1)
-    print(mv_scores3 >= mv_scores1)
+    # print(mv_scores2 == mv_scores1)
+    # print(mv_scores3 >= mv_scores1)
     dv.show()

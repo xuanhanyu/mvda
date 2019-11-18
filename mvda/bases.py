@@ -1,22 +1,26 @@
-from .utils import EPSolver
-from .utils import MvKernels
-from .utils import TensorUser
+from .utils import EPSolver, EPAlgo, EPImplementation
+from .utils import MvKernelizer
+from .utils import TensorUser, pre_tensorize
 from abc import ABC, abstractmethod
+from .utils.typing import *
 import torch
 
 
 # ------------------------------------
 # Abstracts
 # ------------------------------------
-class Preparable:
+class ResourcesPreparer:
     def __init__(self, **kwargs):
-        self.keys = set()
+        self.sharable_resources = set()
         self.dependents = set()
         self.is_prepared = False
 
+    def set_sharable_resources(self, sharable_resources):
+        self.sharable_resources = sharable_resources
+
     def auto_chain(self):
         for val in vars(self).values():
-            if isinstance(val, Preparable):
+            if isinstance(val, ResourcesPreparer):
                 self.add_dependents(val)
 
     def add_dependents(self, *dependents):
@@ -26,9 +30,9 @@ class Preparable:
             self.dependents.update({*dependents})
 
     def _prepare_from_(self, other):
-        for key in self.keys:
-            if hasattr(other, key):
-                setattr(self, key, getattr(other, key))
+        for resource in self.sharable_resources:
+            if hasattr(other, resource):
+                setattr(self, resource, getattr(other, resource))
         self.is_prepared = True
         self.auto_chain()
         for dependent in self.dependents:
@@ -47,15 +51,15 @@ class Preparable:
         return valid
 
 
-class AlgoBase(Preparable):
+class BaseAlgo(ResourcesPreparer):
     def __init__(self, **kwargs):
-        super(AlgoBase, self).__init__()
+        super(BaseAlgo, self).__init__()
         self.dependencies = set()
         self.is_fit = False
 
     def auto_chain(self):
         for val in vars(self).values():
-            if isinstance(val, AlgoBase):
+            if isinstance(val, BaseAlgo):
                 self.add_dependents(val)
                 self.add_dependencies(val)
 
@@ -74,23 +78,32 @@ class AlgoBase(Preparable):
 # ------------------------------------
 # Template for Algorithms
 # ------------------------------------
-KEYS = {'_Xs', '_y', '_y_unique', 'ecs', 'n_views', 'n_samples', 'ori_dims', 'dims', 'kernels'}
+SHARABLE_RESOURCES = {'_Xs', '_y', '_y_unique', 'ecs', 'n_views', 'n_samples', 'ori_dims', 'dims', 'kernels'}
 
 
-class MvDAlgoBase(AlgoBase, TensorUser, ABC):
+class BaseMvDAlgo(BaseAlgo, TensorUser, ABC):
 
-    def __init__(self, n_components='auto', ep='eig', reg='auto', kernels=None, *args, **kwargs):
-        super(MvDAlgoBase, self).__init__()
-        self.keys = KEYS
-        self.n_components = n_components
-        self.ep_solver = ep if isinstance(ep, EPSolver) else EPSolver(ep, reg)
-        self.reg = reg
-        self.kernels = MvKernels(kernels)
+    def __init__(self,
+                 n_components: Union[Integer, String] = 'auto',
+                 ep_algo: Union[EPAlgo, String] = 'eig',
+                 ep_implementation: Union[EPImplementation, String] = 'pytorch',
+                 reg: Union[Number, String] = 'auto',
+                 kernels: Optional[Union[Callable, String, Iterable[Callable], Iterable[String]]] = None,
+                 *args, **kwargs):
+        super(BaseMvDAlgo, self).__init__()
+        self.set_sharable_resources(SHARABLE_RESOURCES)
+        self.n_components: Integer = n_components
+        self.ep_solver: EPSolver = ep_algo if isinstance(ep_algo, EPSolver) else EPSolver(algo=ep_algo,
+                                                                                          implementation=ep_implementation,
+                                                                                          reg=reg)
+        self.reg: Union[Number, String] = reg
+        self.kernels: MvKernelizer = MvKernelizer(kernels)
 
         # training buffers
-        self.Sw = self.Sb = None
-        self.eig_vecs = None
-        self.ws = None
+        self.Sw: Optional[Tensor] = None
+        self.Sb: Optional[Tensor] = None
+        self.eig_vecs: Optional[Tensor] = None
+        self.ws: Optional[Tensor] = None
 
     def _fit_(self):
         super()._fit_()
@@ -101,51 +114,60 @@ class MvDAlgoBase(AlgoBase, TensorUser, ABC):
         elif self.n_components == 'same':
             assert int(sum(self.ori_dims) / self.n_views) == self.ori_dims[0]
             self.n_components = self.ori_dims[0]
-        self.ws = [self.eig_vecs[sum(self.dims[:i]):sum(self.dims[:i + 1]), :] for i in range(len(self.dims))]
+        self.ws = torch.stack(
+            [self.eig_vecs[sum(self.dims[:i]):sum(self.dims[:i + 1]), :] for i in range(len(self.dims))])
 
-    def fit(self, Xs, y, y_unique=None):
+    @pre_tensorize(positionals=(1, 2), keywords='y_unique')
+    def fit(self, Xs: Union[Tensor, Sequence[Tensor]],
+            y: Union[Tensor, Sequence[Any]],
+            y_unique: Optional[Union[Tensor, Sequence[Any]]] = None) -> 'BaseMvDAlgo':
         self._prepare_(Xs, y, y_unique)
         self._fit_()
         return self
 
-    def fit_like(self, other):
+    def fit_like(self, other: 'BaseAlgo') -> 'BaseMvDAlgo':
+        assert other.is_fit, '{} is not fitted yet!'.format(other)
         self._prepare_from_(other)
         self._fit_()
         return self
 
-    def fit_transform(self, Xs, y, y_unique=None):
+    @pre_tensorize(positionals=(1, 2), keywords='y_unique')
+    def fit_transform(self, Xs: Union[Tensor, Sequence[Tensor]],
+                      y: Union[Tensor, Sequence[Any]],
+                      y_unique: Optional[Union[Tensor, Sequence[Any]]] = None) -> Tensor:
         self.fit(Xs, y, y_unique)
         return self.transform(Xs)
 
-    def fit_transform_like(self, other):
-        assert hasattr(other, '_Xs')
+    def fit_transform_like(self, other: 'BaseAlgo') -> Tensor:
+        assert other.is_fit, '{} is not fitted yet!'.format(other)
         _Xs = getattr(other, '_Xs')
         self.fit_like(other)
         return self.transform(_Xs)
 
-    def transform(self, Xs):
+    @pre_tensorize(positionals=1)
+    def transform(self, Xs: Union[Tensor, Sequence[Tensor]]) -> Tensor:
         assert self.is_fit
         Xs = self.kernels.transform(Xs)
-        Ys = [(self.ws[_][:, :self.n_components].t() @ Xs[_].t()).t() for _ in range(len(Xs))]
+        Ys = torch.stack([Xs[_] @ self.ws[_][:, :self.n_components] for _ in range(Xs.shape[0])])
         return Ys
 
-    def calculate_objectives(self):
+    def calculate_objectives(self) -> None:
         self.Sw = self._Sw_()
         self.Sb = self._Sb_()
 
     @abstractmethod
-    def _Sw_(self):
+    def _Sw_(self) -> Tensor:
         pass
 
     @abstractmethod
-    def _Sb_(self):
+    def _Sb_(self) -> Tensor:
         pass
 
     @property
-    def predicates(self):
+    def predicates(self) -> Dict:
         predicates = {'maximize': [], 'minimize': []}
         for val in vars(self).values():
-            if isinstance(val, MvDObjectiveBase):
+            if isinstance(val, BaseMvDObjective):
                 if val.predicate.lower().startswith('max'):
                     predicates['maximize'].append(str(val))
                 elif val.predicate.lower().startswith('min'):
@@ -153,27 +175,30 @@ class MvDAlgoBase(AlgoBase, TensorUser, ABC):
         return predicates
 
     @property
-    def class_vectors(self):
+    def class_vectors(self) -> Tensor:
         return self.ecs
 
     @property
-    def projections(self):
+    def projections(self) -> Tensor:
         return self.ws
 
     @property
-    def W(self):
-        return torch.cat(self.ws, dim=0)
+    def W(self) -> Tensor:
+        return torch.cat([w for w in self.ws])
 
-    def _prepare_(self, Xs, y, y_unique=None):
+    def _prepare_(self,
+                  Xs: Union[Tensor],
+                  y: Tensor,
+                  y_unique: Optional[Tensor] = None):
         if self.is_prepared:
             return
-        self._Xs = [self._tensorize_(X) for X in Xs]
-        self._y = self._tensorize_(y).long()
-        self._y_unique = torch.unique(self._y) if y_unique is None else self._tensorize_(y_unique).long()
-        self.ecs = [torch.tensor([1 if _ == clazz else 0 for _ in self._y], dtype=torch.float)
-                    for clazz in self._y_unique]
-        self.n_views = len(self._Xs)
-        self.n_samples = len(self._y)
+        self._Xs = Xs
+        self._y = y
+        self._y_unique = torch.unique(self._y) if y_unique is None else y_unique
+        self.ecs = torch.stack([torch.tensor([1 if _ == clazz else 0 for _ in self._y], dtype=torch.float)
+                                for clazz in self._y_unique])
+        self.n_views = self._Xs.shape[0]
+        self.n_samples = self._y.shape[0]
         self.ori_dims = [X.shape[1] for X in self._Xs]
         self._Xs = self.kernels.fit_transform(self._Xs)
         self.dims = [X.shape[1] for X in self._Xs]
@@ -183,46 +208,57 @@ class MvDAlgoBase(AlgoBase, TensorUser, ABC):
 # ------------------------------------
 # Template for Objectives
 # ------------------------------------
-class MvDObjectiveBase(AlgoBase, TensorUser, ABC):
+class BaseMvDObjective(BaseAlgo, TensorUser, ABC):
 
-    def __init__(self, predicate='maximize', kernels=None, *args, **kwargs):
-        super(MvDObjectiveBase, self).__init__()
-        self.keys = KEYS
+    def __init__(self,
+                 predicate: String = 'maximize',
+                 kernels: Optional[Union[Callable, String, Iterable[Callable], Iterable[String]]] = None,
+                 *args, **kwargs):
+        super(BaseMvDObjective, self).__init__()
+        self.set_sharable_resources(SHARABLE_RESOURCES)
         self.O = None
         self.predicate = predicate
-        self.kernels = MvKernels(kernels)
+        self.kernels = MvKernelizer(kernels)
 
-    def _fit_(self):
+    def _fit_(self) -> None:
         self.O = self._O_()
         super()._fit_()
 
-    def fit(self, Xs, y, y_unique=None):
+    @pre_tensorize(positionals=(1, 2), keywords='y_unique')
+    def fit(self,
+            Xs: Union[Tensor, Iterable[Tensor]],
+            y: Union[Tensor, NumpyArray, Iterable],
+            y_unique: Optional[Union[Tensor, NumpyArray, Iterable]] = None) -> 'BaseMvDObjective':
         self._prepare_(Xs, y, y_unique)
         self._fit_()
         return self
 
-    def fit_like(self, other):
+    def fit_like(self, other: 'BaseAlgo') -> 'BaseMvDObjective':
+        assert other.is_fit, '{} is not fitted yet!'.format(other)
         self._prepare_from_(other)
         self._fit_()
         return self
 
-    def target(self):
+    def target(self) -> Optional[Tensor]:
         return self.O
 
     @abstractmethod
     def _O_(self):
         pass
 
-    def _prepare_(self, Xs, y, y_unique=None):
+    def _prepare_(self,
+                  Xs: Tensor,
+                  y: Tensor,
+                  y_unique: Optional[Tensor] = None) -> None:
         if self.is_prepared:
             return
-        self._Xs = [self._tensorize_(X) for X in Xs]
-        self._y = self._tensorize_(y).long()
-        self._y_unique = torch.unique(self._y) if y_unique is None else self._tensorize_(y_unique).long()
+        self._Xs = Xs
+        self._y = y
+        self._y_unique = torch.unique(self._y) if y_unique is None else y_unique
         self.ecs = [torch.tensor([1 if _ == clazz else 0 for _ in self._y], dtype=torch.float)
                     for clazz in self._y_unique]
-        self.n_views = len(self._Xs)
-        self.n_samples = len(self._y)
+        self.n_views = self._Xs.shape[0]
+        self.n_samples = self._y.shape[0]
         self.ori_dims = [X.shape[1] for X in self._Xs]
         self._Xs = self.kernels.fit_transform(self._Xs)
         self.dims = [X.shape[1] for X in self._Xs]

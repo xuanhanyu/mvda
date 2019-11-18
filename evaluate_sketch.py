@@ -43,13 +43,13 @@ if __name__ == '__main__':
     n_views = len(Xs_train)
     print(len(y_train), len(y_test))
 
-    mv_scores1 = eval_multiview_model(mvmodel=MvDAvc(n_components=50, ep='ldax', lambda_vc=0.1),
+    mv_scores1 = eval_multiview_model(mvmodel=MvDAvc(n_components=50, ep_algo='ldax', lambda_vc=0.1),
                                       Xs_train=Xs_train, y_train=y_train,
                                       Xs_test=Xs_test, y_test=y_test,
                                       return_projected=True)
     print('Projected space MvDA', mv_scores1, sep='\n', end='\n\n')
 
-    mv_scores2 = eval_multiview_model(mvmodel=MvCSDA(n_components=2, ep='eig', kernels='linear'),
+    mv_scores2 = eval_multiview_model(mvmodel=MvCSDA(n_components=50, ep_algo='ldax', kernels='linear'),
                                       clf=KNeighborsClassifier(),
                                       Xs_train=Xs_train, y_train=y_train,
                                       Xs_test=Xs_test, y_test=y_test,
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     print('Projected space MvCSDA', mv_scores2, sep='\n', end='\n\n')
 
     mv_scores3, Ys_train, Ys_test = eval_multiview_model(
-        mvmodel=MvLFDA(n_components=2, ep='eig', kernels='linear', lambda_lc=0.05),
+        mvmodel=MvLFDA(n_components=2, ep_algo='eig', kernels='linear', lambda_lc=0.05),
         clf=KNeighborsClassifier(),
         Xs_train=Xs_train, y_train=y_train,
         Xs_test=Xs_test, y_test=y_test,

@@ -24,7 +24,7 @@ if __name__ == '__main__':
         # Xs_train = [embeds[_].fit_transform(Xs_train[_], y_train) for _ in range(dataset.n_views)]
         # Xs_test = [embeds[_].transform(Xs_test[_]) for _ in range(dataset.n_views)]
 
-        mvmodel = MvLFDA(n_components='auto', ep='svd', kernels='linear')
+        mvmodel = MvLFDA(n_components='auto', ep_algo='svd', kernels='linear')
         Ys_train = mvmodel.fit_transform(Xs_train, y_train)
         Ys_test = mvmodel.transform(Xs_test)
         print(mvmodel.n_components)

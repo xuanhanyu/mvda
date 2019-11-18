@@ -11,7 +11,7 @@ if __name__ == '__main__':
     from sklearn.metrics.pairwise import rbf_kernel as kernel
     Ks = [torch.tensor(kernel(Xs[_])).float() if precompute_kernel else Xs[_] for _ in range(len(Xs))]
 
-    model = MvLFDA(n_components=2, kernels='none', ep='eig')
+    model = MvLFDA(n_components=2, kernels='none', ep_algo='eig')
     print(model.predicates)
     Ys = model.fit_transform(Xs, y)
 

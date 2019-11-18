@@ -1,13 +1,13 @@
-from .bases import MvDAlgoBase
+from .bases import BaseMvDAlgo
 from .objectives import MvLFDAIntraScatter, MvLFDAInterScatter, ViewConsistency, Regularization
 
 
-class MvLFDA(MvDAlgoBase):
-    name = 'Multi-view Discriminant Analysis'
+class MvLFDA(BaseMvDAlgo):
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  affinity_type='kernel',
@@ -18,7 +18,8 @@ class MvLFDA(MvDAlgoBase):
                  lambda_lc=1.0,
                  *args, **kwargs):
         super(MvLFDA, self).__init__(n_components=n_components,
-                                     ep=ep,
+                                     ep_algo=ep_algo,
+                                     ep_implementation=ep_implementation,
                                      reg=reg,
                                      kernels=kernels,
                                      *args, **kwargs)
@@ -43,11 +44,11 @@ class MvLFDA(MvDAlgoBase):
 
 
 class MvLFDAvc(MvLFDA):
-    name = MvLFDA.name + ' with View-Consistency'
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  affinity_type='kernel',
@@ -58,7 +59,8 @@ class MvLFDAvc(MvLFDA):
                  lambda_lc=1.0, lambda_vc=0.01,
                  *args, **kwargs):
         super(MvLFDAvc, self).__init__(n_components=n_components,
-                                       ep=ep,
+                                       ep_algo=ep_algo,
+                                       ep_implementation=ep_implementation,
                                        reg=reg,
                                        kernels=kernels,
                                        affinity_type=affinity_type,
@@ -78,11 +80,11 @@ class MvLFDAvc(MvLFDA):
 
 
 class RMvLFDA(MvLFDA):
-    name = 'Regularized ' + MvLFDA.name
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  affinity_type='kernel',
@@ -93,7 +95,8 @@ class RMvLFDA(MvLFDA):
                  lambda_lc=1.0, lambda_reg=0.1,
                  *args, **kwargs):
         super(RMvLFDA, self).__init__(n_components=n_components,
-                                      ep=ep,
+                                      ep_algo=ep_algo,
+                                      ep_implementation=ep_implementation,
                                       reg=reg,
                                       kernels=kernels,
                                       affinity_type=affinity_type,
@@ -112,11 +115,11 @@ class RMvLFDA(MvLFDA):
 
 
 class RMvLFDAvc(MvLFDAvc):
-    name = 'Regularized ' + MvLFDAvc.name
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  affinity_type='kernel',
@@ -127,7 +130,8 @@ class RMvLFDAvc(MvLFDAvc):
                  lambda_lc=1.0, lambda_vc=0.01, lambda_reg=0.1,
                  *args, **kwargs):
         super(RMvLFDAvc, self).__init__(n_components=n_components,
-                                        ep=ep,
+                                        ep_algo=ep_algo,
+                                        ep_implementation=ep_implementation,
                                         reg=reg,
                                         kernels=kernels,
                                         affinity_type=affinity_type,

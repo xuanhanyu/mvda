@@ -27,7 +27,7 @@ def rvs(dim=3, seed=None):
 
 def random_dataset(n_classes=5, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=None):
     np.random.seed(seed)
-    n_samples = n_classes * 30 if n_samples == 'auto' else n_samples
+    n_samples = n_classes * 20 if n_samples == 'auto' else n_samples
     X_ori, y = make_blobs(n_features=n_features, centers=n_classes, n_samples=n_samples)
     Xs = [X_ori]
     for i in range(n_views - 1):
@@ -45,9 +45,10 @@ def random_dataset(n_classes=5, n_views=3, n_features=3, n_samples='auto', rotat
     return [torch.tensor(X).float() for X in Xs], y
 
 
-def single_blob_dataset(n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=156):
+def single_blob_dataset(n_classes=3, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=156):
     np.random.seed(seed)
-    X_ori, y = make_blobs(n_features=n_features, centers=3)
+    n_samples = n_classes * 20 if n_samples == 'auto' else n_samples
+    X_ori, y = make_blobs(n_features=n_features, centers=n_classes, n_samples=n_samples)
     Xs = [X_ori]
     for i in range(n_views - 1):
         X_new_view = X_ori + np.random.randn(n_features) * 7
@@ -77,11 +78,11 @@ def dual_blobs_dataset(seed=138):
     return [torch.tensor(X_v1).float(), torch.tensor(X_v2).float(), torch.tensor(X_v3).float()], y
 
 
-def gaussian_dataset(n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=154):
+def gaussian_dataset(n_classes=3, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=154):
     np.random.seed(seed)
-    np.random.seed(seed)
-    X_ori, y = make_gaussian_quantiles(cov=4.5, n_features=3,
-                                       n_classes=3, random_state=156)
+    n_samples = n_classes * 20 if n_samples == 'auto' else n_samples
+    X_ori, y = make_gaussian_quantiles(cov=4.5, n_features=3, n_samples=n_samples,
+                                       n_classes=n_classes, random_state=156)
     Xs = [X_ori]
     for i in range(n_views - 1):
         X_new_view = X_ori + np.random.randn(n_features) * np.random.randint(7, 30)

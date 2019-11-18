@@ -1,18 +1,19 @@
-from .bases import MvDAlgoBase
+from .bases import BaseMvDAlgo
 from .objectives import MvDAIntraScatter, MvDAInterScatter, ViewConsistency, Regularization
 
 
-class MvDA(MvDAlgoBase):
-    name = 'Multi-view Discriminant Analysis'
+class MvDA(BaseMvDAlgo):
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  *args, **kwargs):
         super(MvDA, self).__init__(n_components=n_components,
-                                   ep=ep,
+                                   ep_algo=ep_algo,
+                                   ep_implementation=ep_implementation,
                                    reg=reg,
                                    kernels=kernels,
                                    *args, **kwargs)
@@ -27,17 +28,18 @@ class MvDA(MvDAlgoBase):
 
 
 class MvDAvc(MvDA):
-    name = MvDA.name + ' with View-Consistency'
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  lambda_vc=0.01,
                  *args, **kwargs):
         super(MvDAvc, self).__init__(n_components=n_components,
-                                     ep=ep,
+                                     ep_algo=ep_algo,
+                                     ep_implementation=ep_implementation,
                                      reg=reg,
                                      kernels=kernels,
                                      *args, **kwargs)
@@ -50,17 +52,18 @@ class MvDAvc(MvDA):
 
 
 class RMvDA(MvDA):
-    name = 'Regularized ' + MvDA.name
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  lambda_reg=0.1,
                  *args, **kwargs):
         super(RMvDA, self).__init__(n_components=n_components,
-                                    ep=ep,
+                                    ep_algo=ep_algo,
+                                    ep_implementation=ep_implementation,
                                     reg=reg,
                                     kernels=kernels,
                                     *args, **kwargs)
@@ -73,17 +76,18 @@ class RMvDA(MvDA):
 
 
 class RMvDAvc(MvDAvc):
-    name = 'Regularized ' + MvDAvc.name
 
     def __init__(self,
                  n_components='auto',
-                 ep='eig',
+                 ep_algo='eigen',
+                 ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
                  lambda_vc=0.01, lambda_reg=0.1,
                  *args, **kwargs):
         super(RMvDAvc, self).__init__(n_components=n_components,
-                                      ep=ep,
+                                      ep_algo=ep_algo,
+                                      ep_implementation=ep_implementation,
                                       reg=reg,
                                       kernels=kernels,
                                       lambda_vc=lambda_vc,
