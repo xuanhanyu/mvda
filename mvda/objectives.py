@@ -130,7 +130,7 @@ class ClassSeparating(BaseMvDObjective):
 class MvLFDAIntraScatter(BaseMvDObjective):
 
     def __init__(self,
-                 affinity_type='kernel',
+                 affinity_type='lle',
                  n_neighbors=5,
                  epsilon='auto',
                  affinity_kernel='rbf',
@@ -177,7 +177,7 @@ class MvLFDAIntraScatter(BaseMvDObjective):
 class MvLFDAInterScatter(BaseMvDObjective):
 
     def __init__(self,
-                 affinity_type='kernel',
+                 affinity_type='lle',
                  n_neighbors=5,
                  epsilon='auto',
                  affinity_kernel='rbf',

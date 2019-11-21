@@ -1,8 +1,9 @@
 from .bases import BaseMvDAlgo
 from .objectives import MvDAInterScatter, CommonComponent, DifferingClass
+from .mvda import MvDA
 
 
-class MvCCDA(BaseMvDAlgo):
+class MvCCDA(MvDA):
 
     def __init__(self,
                  n_components='auto',
@@ -10,6 +11,7 @@ class MvCCDA(BaseMvDAlgo):
                  ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
+                 lambda_cc=0.1,
                  *args, **kwargs):
         super(MvCCDA, self).__init__(n_components=n_components,
                                      ep_algo=ep_algo,
@@ -18,13 +20,11 @@ class MvCCDA(BaseMvDAlgo):
                                      kernels=kernels,
                                      *args, **kwargs)
         self.cco = CommonComponent()
-        self.sbo = MvDAInterScatter()
+        self.lambda_cc = lambda_cc
 
-    def _Sw_(self):
-        return self.cco.target()
-
-    def _Sb_(self):
-        return self.sbo.target()
+    def calculate_objectives(self) -> None:
+        self.Sw = self._Sw_() + self.lambda_cc * self.cco.target()
+        self.Sb = self._Sb_()
 
 
 class MvDCCCDA(BaseMvDAlgo):

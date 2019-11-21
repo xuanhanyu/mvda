@@ -9,12 +9,12 @@ import torch
 
 
 def calc_sim(gallery, test):
-    gallery = torch.cat([(_ / torch.norm(_)).unsqueeze(0) for _ in gallery]).squeeze(0)
-    test = torch.cat([(_ / torch.norm(_)).unsqueeze(0) for _ in test]).squeeze(0)
+    gallery = torch.stack([_ / torch.norm(_) for _ in gallery])
+    test = torch.stack([_ / torch.norm(_) for _ in test])
     return test @ gallery.t()
 
 
-def eval_multiview_model(mvmodel, Xs_train, y_train, Xs_test, y_test, return_projected=False):
+def eval_multiview_model(mvmodel, Xs_train, y_train, Xs_test, y_test):
     Ys_train = mvmodel.fit_transform(Xs_train, y_train)
     Ys_test = mvmodel.transform(Xs_test)
     # Classify
@@ -30,8 +30,7 @@ def eval_multiview_model(mvmodel, Xs_train, y_train, Xs_test, y_test, return_pro
             label_evaluate = y_test[max_sim_index]
             rate = (label_evaluate == y_test).float().sum() / len(y_test)
             mv_scores[view_train, view_test] = rate
-    print(mv_scores)
-    exit(0)
+    # print(mv_scores)
     return mv_scores
 
 
@@ -43,26 +42,22 @@ if __name__ == '__main__':
     n_views = len(Xs_train)
     print(len(y_train), len(y_test))
 
-    mv_scores1 = eval_multiview_model(mvmodel=MvDAvc(n_components=50, ep_algo='ldax', lambda_vc=0.1),
+    mv_scores1 = eval_multiview_model(mvmodel=MvDA(n_components=50, ep_algo='ldax', kernels='rbf', lambda_vc=0.1),
                                       Xs_train=Xs_train, y_train=y_train,
-                                      Xs_test=Xs_test, y_test=y_test,
-                                      return_projected=True)
-    print('Projected space MvDA', mv_scores1, sep='\n', end='\n\n')
+                                      Xs_test=Xs_test, y_test=y_test)
+    print('MvDA', mv_scores1, sep='\n', end='\n\n')
 
-    mv_scores2 = eval_multiview_model(mvmodel=MvCSDA(n_components=50, ep_algo='ldax', kernels='linear'),
-                                      clf=KNeighborsClassifier(),
-                                      Xs_train=Xs_train, y_train=y_train,
-                                      Xs_test=Xs_test, y_test=y_test,
-                                      return_projected=True)
-    print('Projected space MvCSDA', mv_scores2, sep='\n', end='\n\n')
+    # ret2 = []
+    # for coef in np.arange(0, 1.1, 0.1):
+    #     mv_scores2 = eval_multiview_model(mvmodel=MvCCDA(n_components=50, ep_algo='ldax', lambda_cc=coef),
+    #                                       Xs_train=Xs_train, y_train=y_train,
+    #                                       Xs_test=Xs_test, y_test=y_test)
+    #     print('MvCSDA - coef={}'.format(coef), mv_scores2, sep='\n')
+    #     ret2.append(mv_scores2.sum() / 2)
+    # print(ret2)
 
-    mv_scores3, Ys_train, Ys_test = eval_multiview_model(
-        mvmodel=MvLFDA(n_components=2, ep_algo='eig', kernels='linear', lambda_lc=0.05),
-        clf=KNeighborsClassifier(),
-        Xs_train=Xs_train, y_train=y_train,
-        Xs_test=Xs_test, y_test=y_test,
-        return_projected=True)
-    print('Projected space MvLFDA', mv_scores3, sep='\n', end='\n\n')
+    # mv_scores3 = eval_multiview_model(mvmodel=MvLFDA(n_components=50, ep_algo='ldax', lambda_lc=0.15),
+    #                                   Xs_train=Xs_train, y_train=y_train,
+    #                                   Xs_test=Xs_test, y_test=y_test)
+    # print('Projected space MvLFDA', mv_scores3, sep='\n', end='\n\n')
 
-    print(mv_scores2 == mv_scores1)
-    print(mv_scores3 >= mv_scores1)
