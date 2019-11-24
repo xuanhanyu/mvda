@@ -1,5 +1,5 @@
-from mvda.utils import EPSolver
-from mvda.utils import affinity
+from torchsl.utils import EPSolver
+from torchsl.utils import affinity
 import torch
 import numpy as np
 

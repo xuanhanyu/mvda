@@ -1,4 +1,4 @@
-from mvda.objectives import *
+from torchsl.mvsl.objectives import *
 from torch.autograd import Variable
 import torch
 import torch.nn as nn

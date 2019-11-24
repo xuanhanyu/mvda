@@ -1,20 +1,17 @@
+from torchsl.utils import pre_tensorize
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.stats import norm
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
 import itertools
 import torch
-
-matplotlib.use('GTK3Agg')
 
 
 class DataVisualizer:
     cmaps = ['red', 'green', 'blue', 'yellow', 'cyan', 'orange', 'purple', 'teal', 'steelblue', 'crimson', 'pink',
              'navy']
     markers = ['o', '^', 's', '*', 'p', 'P', 'v', 'X', 'D', 'H', "2", '$...$']
-    linewidth = 0.1
-    alpha = 0.5
+    scatter_params = {'linewidth': 0.1, 'alpha': 0.5}
 
     def __init__(self, embed_algo=None, embed_style='global', grid=True, legend=True):
         if embed_algo is not None and (hasattr(embed_algo, 'n_components') and embed_algo.n_components > 3):
@@ -22,7 +19,6 @@ class DataVisualizer:
         assert embed_algo is None or embed_style in ['per_view', 'global']
         self.manifold = embed_algo
         self.manifold_style = embed_style
-        self.scatter_params = {'linewidth': self.linewidth, 'alpha': self.alpha}
         self.pausing = False
         self.grid = grid
         self.legend = legend
@@ -42,37 +38,57 @@ class DataVisualizer:
         ax.plot(transformed, pdfs, 'go--', lw=1, alpha=0.8, label='PDF')
         plt.show()
 
-    def scatter(self, X, ys=None):
-        if len(X) > 0:
-            plt.rc('grid', linestyle="dotted", color='black', alpha=0.6)
-            dim = X[0].shape[1]
-            labels = ys if ys is not None else np.arange(len(X))
+    @pre_tensorize(positionals=(1, 2))
+    def scatter(self, X, y, title=None):
+        ori_dim = X.shape[1]
+        if self.manifold is not None and self.manifold.n_components < ori_dim:
+            X = self.__embed(X, y)
+        plt.rc('grid', linestyle="dotted", color='black', alpha=0.6)
+        dim = X.shape[1]
+        X = DataVisualizer.__group__(X, y)
+        assert 0 < dim <= 3
+        if not self.pausing:
             if dim <= 2:
+                self.fig, self.ax = plt.subplots()
                 if dim == 1:
-                    tmp = [np.array([[x, 0] for x in X_i]) for X_i in X]
-                    X = tmp
-                fig, ax = plt.subplots()
-                for i, X_i in enumerate(X):
-                    ax.scatter(X_i[:, 0], X_i[:, 1],
-                               c=self.cmaps[i % len(self.cmaps)],
-                               label=labels[i], **self.scatter_params)
+                    dim = 2
             elif dim == 3:
-                fig = plt.figure()
-                ax = Axes3D(fig)
-                for i, X_i in enumerate(X):
-                    ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2],
-                               c=self.cmaps[i % len(self.cmaps)],
-                               label=labels[i], **self.scatter_params)
-            else:
-                raise AttributeError('Unable to plot space of dimension greater than 3!')
-            if self.legend: ax.legend()
-            ax.set_title('{}D feature space'.format(dim))
-            plt.grid(self.grid)
+                self.fig = plt.figure()
+                self.ax = Axes3D(self.fig)
+            plt.rc('grid', linestyle="dotted", color='black', alpha=0.6)
+        else:
+            self.ax.clear()
+        if title is not None:
+            self.fig.canvas.set_window_title(title)
 
+        y_unique = torch.unique(y)  # y if y is not None else np.arange(len(X))
+        if dim <= 2:
+            for i, X_i in enumerate(X):
+                self.ax.scatter(X_i[:, 0], X_i[:, 1],
+                                c=self.cmaps[i % len(self.cmaps)],
+                                # marker=self.markers[v % len(self.markers)],
+                                s=50, label=y_unique[i], **self.scatter_params)
+        elif dim == 3:
+            for i, X_i in enumerate(X):
+                self.ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2],
+                                c=self.cmaps[i % len(self.cmaps)],
+                                # marker=self.markers[v % len(self.markers)],
+                                s=50, label=y_unique[i], **self.scatter_params)
+        else:
+            raise AttributeError('Unable to plot space of dimension greater than 3!')
+        if self.legend: self.ax.legend()
+
+        if ori_dim == dim:
+            self.ax.set_title('{}D feature space'.format(dim))
+        else:
+            self.ax.set_title('{}D embeddings of {}D feature space'.format(dim, ori_dim))
+        plt.grid(self.grid)
+
+    @pre_tensorize(positionals=(1, 2))
     def mv_scatter(self, Xs, y, title=None):
         ori_dims = torch.tensor([X.shape[1] for X in Xs])
         if self.manifold is not None and self.manifold.n_components < torch.max(ori_dims):
-            Xs = self.__embed__(Xs, y)
+            Xs = self.__mv_embed(Xs, y)
         dims = torch.tensor([X.shape[1] for X in Xs])
         max_dim = torch.max(dims)
         Xs = DataVisualizer.__group__(Xs, y)
@@ -91,8 +107,8 @@ class DataVisualizer:
         if title is not None:
             self.fig.canvas.set_window_title(title)
 
+        y_unique = torch.unique(y)
         for v in range(len(Xs)):
-            labels = y if y is not None else np.arange(len(Xs[v]))
             if dims[v] < max_dim:
                 Xs[v] = [np.array([np.concatenate([x, np.zeros(max_dim - dims[v])], axis=0) for x in X_i]) for X_i in
                          Xs[v]]
@@ -101,13 +117,13 @@ class DataVisualizer:
                     self.ax.scatter(X_i[:, 0], X_i[:, 1],
                                     c=self.cmaps[i % len(self.cmaps)],
                                     marker=self.markers[v % len(self.markers)],
-                                    s=50, label=labels[i], **self.scatter_params)
+                                    s=50, label=y_unique[i], **self.scatter_params)
             elif max_dim == 3:
                 for i, X_i in enumerate(Xs[v]):
                     self.ax.scatter(X_i[:, 0], X_i[:, 1], X_i[:, 2],
                                     c=self.cmaps[i % len(self.cmaps)],
                                     marker=self.markers[v % len(self.markers)],
-                                    s=50, label=labels[i], **self.scatter_params)
+                                    s=50, label=y_unique[i], **self.scatter_params)
             else:
                 raise AttributeError('Unable to plot space of dimension greater than 3!')
         if self.legend: self.ax.legend()
@@ -132,12 +148,18 @@ class DataVisualizer:
     @staticmethod
     def __group__(Xs, y):
         y_unique = np.unique(y)
-        Rs = []
-        for X in Xs:
-            Rs.append([X[np.where(y == c)[0]] for c in y_unique])
-        return Rs
+        if len(Xs.shape) == 2:
+            return [Xs[np.where(y == c)[0]] for c in y_unique]
+        else:
+            Rs = []
+            for X in Xs:
+                Rs.append([X[np.where(y == c)[0]] for c in y_unique])
+            return Rs
 
-    def __embed__(self, Xs, y):
+    def __embed(self, X, y):
+        return self.manifold.fit_transform(X, y)
+
+    def __mv_embed(self, Xs, y):
         if self.manifold_style == 'per_view':
             return [self.manifold.fit_transform(X, y) for X in Xs]
         elif self.manifold_style == 'global':

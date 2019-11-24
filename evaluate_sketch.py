@@ -1,4 +1,4 @@
-from mvda import *
+from torchsl import *
 from data_visualizer import DataVisualizer
 from sklearn.manifold.t_sne import TSNE
 from sklearn.neighbors import KNeighborsClassifier

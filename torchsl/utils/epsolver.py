@@ -27,7 +27,7 @@ class EPImplementation(PredefinedArguments):
 
 
 # Use singleton matlab engine to avoid overhead.
-ENGINE: Optional[matlab.engine.matlabengine.MatlabEngine] = None
+ENGINE = None
 
 
 class EPSolver:

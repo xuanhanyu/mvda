@@ -1,4 +1,4 @@
-from mvda import *
+from torchsl import *
 import synthetics
 import torch
 

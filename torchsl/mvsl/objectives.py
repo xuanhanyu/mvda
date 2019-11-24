@@ -1,5 +1,5 @@
 from .bases import BaseMvDObjective
-from .utils import affinity
+from ..utils import affinity
 import torch
 
 

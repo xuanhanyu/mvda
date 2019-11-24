@@ -1,4 +1,4 @@
-from mvda import *
+from torchsl.mvsl import *
 from dataset.mica_gesture import MultiviewMicaGestureDataset
 from data_visualizer import DataVisualizer
 from sklearn.manifold.t_sne import TSNE
@@ -31,7 +31,7 @@ def eval_multiview_model(mvmodel, clf, Xs_train, y_train, Xs_test, y_test, retur
 if __name__ == '__main__':
     visualize = True
     Xs, y = synthetics.single_blob_dataset(n_classes=5, n_views=3, n_features=3, seed=107)  # 107
-    dv = DataVisualizer(embed_algo=TSNE(n_components=3), embed_style='global', legend=False)
+    dv = DataVisualizer(embed_algo=TSNE(n_components=3), embed_style='global', legend=True)
     n_views = len(Xs)
     Xs_train, y_train, Xs_test, y_test = multiview_train_test_split(Xs, y)
     print(len(y_train), len(y_test))
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     Xs_all, y_all = join_multiview_datasets([Xs_train, Xs_test], [y_train, y_test])
     dv.mv_scatter(Xs_all, y_all, title='Original space')
 
-    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDAvc(n_components=2, ep_algo='ldax', kernels='none'),
+    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDAvc(n_components=2, ep_algo='eigen', kernels='linear'),
                                                          clf=KNeighborsClassifier(),
                                                          Xs_train=Xs_train, y_train=y_train,
                                                          Xs_test=Xs_test, y_test=y_test,

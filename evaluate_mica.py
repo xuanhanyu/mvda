@@ -1,4 +1,4 @@
-from mvda import *
+from torchsl import *
 from dataset.mica_gesture import MultiviewMicaGestureDataset
 from data_visualizer import DataVisualizer
 from sklearn.manifold.t_sne import TSNE
@@ -19,8 +19,8 @@ def summary(classification_scores):
 
 
 if __name__ == '__main__':
-    visualize = False
-    dataset = MultiviewMicaGestureDataset(logic=False)
+    visualize = True
+    dataset = MultiviewMicaGestureDataset(logic=True)
     dv = DataVisualizer(embed_algo=TSNE(n_components=2), legend=False)
 
     loo_mv_scores = np.zeros((dataset.n_views, dataset.n_views))
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         # Xs_train = [embeds[_].fit_transform(Xs_train[_], y_train) for _ in range(dataset.n_views)]
         # Xs_test = [embeds[_].transform(Xs_test[_]) for _ in range(dataset.n_views)]
 
-        mvmodel = MvDA(n_components='auto', ep_algo='ldax', kernels='linear')
+        mvmodel = MvCCDA(n_components='auto', ep_algo='eigen', kernels='linear', lambda_cc=0.001)
         Ys_train = mvmodel.fit_transform(Xs_train, y_train)
         Ys_test = mvmodel.transform(Xs_test)
         print(mvmodel.n_components)
