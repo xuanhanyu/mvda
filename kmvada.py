@@ -97,7 +97,7 @@ if __name__ == '__main__':
         mv_Ys = [normalize(Ys) for Ys in mv_Ys]
 
         # plot
-        from data_visualizer import DataVisualizer
+        from torchsl.utils.data_visualizer import DataVisualizer
         dv = DataVisualizer()
         dv.mv_scatter(group(mv_Ks, y))
         dv.mv_scatter(mv_Ys)

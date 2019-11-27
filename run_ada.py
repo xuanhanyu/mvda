@@ -2,7 +2,7 @@ import discriminant_analysis as da
 import numpy as np
 import torch
 
-from data_visualizer import DataVisualizer
+from torchsl.utils.data_visualizer import DataVisualizer
 
 
 def normalize(v):

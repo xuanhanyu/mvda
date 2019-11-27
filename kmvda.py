@@ -93,7 +93,7 @@ if __name__ == '__main__':
         mv_Ys = [(Ws[_].t() @ mv_Ks[_].t()).t()[:, :2] for _ in range(len(mv_Ks))]
 
         # plot
-        from data_visualizer import DataVisualizer
+        from torchsl.utils.data_visualizer import DataVisualizer
         dv = DataVisualizer()
         dv.mv_scatter(mv_Xs, y)
         dv.mv_scatter(mv_Ys, y)

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     print(X.shape, X_proj.T.shape)
     Xps_test = [X_proj.T[np.where(y_test == y_unique[i])[0]] for i in range(len(y_unique))]
 
-    from data_visualizer import DataVisualizer
+    from torchsl.utils.data_visualizer import DataVisualizer
 
     dv = DataVisualizer()
     dv.scatter(Xs_train)

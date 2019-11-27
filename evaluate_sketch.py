@@ -1,8 +1,3 @@
-from torchsl import *
-from data_visualizer import DataVisualizer
-from sklearn.manifold.t_sne import TSNE
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
 from dataset.sketch import SketchDataset
 import numpy as np
 import torch

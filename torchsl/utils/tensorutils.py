@@ -6,31 +6,72 @@ import torch
 # ------------------------------------
 # Hidden function
 # ------------------------------------
+def _tensor_type(mat: Any):
+    if mat is None:
+        pass
+    elif torch.is_tensor(mat):
+        return torch.Tensor
+    elif isinstance(mat, np.ndarray):
+        return np.ndarray
+    elif hasattr(mat, '__iter__'):
+        try:
+            return _tensor_type(mat[0])
+        except IndexError:
+            pass
+    return None
+
+
 def _tensorize(mat: Any,
                dtype: Optional[Dtype] = None,
                device: Optional[Device] = None) -> Union[Tensor, Any]:
     if mat is None:
-        return mat
+        pass
     elif torch.is_tensor(mat):
+        mat = mat.to(dtype=dtype, device=device)
+    elif isinstance(mat, np.ndarray):
+        mat = torch.from_numpy(mat).to(dtype=dtype, device=device)
+    elif hasattr(mat, '__iter__'):
+        return torch.stack([_tensorize(_) for _ in mat]).to(dtype=dtype, device=device)
+    else:
+        mat = torch.tensor(mat, dtype=dtype, device=device)
+    return mat
+
+
+def _numpify(mat: Any,
+             dtype: Optional[Dtype] = None):
+    if mat is None:
         pass
     elif isinstance(mat, np.ndarray):
-        mat = torch.from_numpy(mat)
+        mat = mat.astype(dtype)
+    if torch.is_tensor(mat):
+        return mat.numpy().astype(dtype)
     elif hasattr(mat, '__iter__'):
-        return torch.stack([_tensorize(_) for _ in mat])
-    else:
-        mat = torch.tensor(mat)
-
-    if dtype is not None:
-        mat = mat.to(dtype=dtype)
-    if device is not None:
-        mat = mat.to(device=device)
+        return np.array([_numpify(_) for _ in mat], dtype=dtype)
     return mat
 
 
 def _vectorize(mat: Any):
-    if torch.is_tensor(mat) or isinstance(mat, np.ndarray):
+    if mat is None:
+        pass
+    elif torch.is_tensor(mat) or isinstance(mat, np.ndarray):
         return mat
-    return np.array(mat)
+    elif hasattr(mat, '__iter__'):
+        element_type = _tensor_type(mat)
+        if element_type is np.ndarray:
+            return np.array(mat)
+        elif element_type is torch.Tensor:
+            return _tensorize(mat)
+    return mat
+
+
+def _listify(mat: Tensorizable):
+    if mat is None:
+        pass
+    if torch.is_tensor(mat) or isinstance(mat, np.ndarray):
+        return mat.tolist()
+    elif hasattr(mat, '__iter__'):
+        return [_listify(_) for _ in mat]
+    return mat
 
 
 # ------------------------------------
@@ -48,7 +89,8 @@ def pre_process(positionals: Union[Integer, Sequence[Integer]] = (),
         def wrapper(*args, **kwargs):
             args = list(args)
             for positional in positionals:
-                args[positional] = transform(args[positional])
+                if len(args) > positional:
+                    args[positional] = transform(args[positional])
             for keyword in keywords:
                 if keyword in kwargs:
                     kwargs[keyword] = transform(kwargs[keyword])
@@ -70,7 +112,8 @@ def post_process(positionals: Union[Integer, Sequence[Integer]] = (),
             if len(positionals) > 0 and isinstance(ret, tuple):
                 ret = list(ret)
                 for positional in positionals:
-                    ret[positional] = transform(ret[positional])
+                    if len(ret) > positional:
+                        ret[positional] = transform(ret[positional])
                 return tuple(ret)
             return transform(ret)
 
@@ -117,12 +160,12 @@ def process(pre_positionals: Union[Integer, Sequence[Integer]] = (),
 def pre_numpify(positionals: Union[Integer, Sequence[Integer]] = (),
                 keywords: Union[String, Sequence[String]] = (),
                 dtype: Optional[Dtype] = None):
-    pass
+    return pre_process(positionals, keywords, transform=lambda arg: _numpify(arg, dtype=dtype))
 
 
 def post_numpify(positionals: Union[Integer, Sequence[Integer]] = (),
                  dtype: Optional[Dtype] = None):
-    pass
+    return post_process(positionals, transform=lambda arg: _numpify(arg, dtype=dtype))
 
 
 def pre_tensorize(positionals: Union[Integer, Sequence[Integer]] = (),
@@ -145,6 +188,15 @@ def pre_vectorize(positionals: Union[Integer, Sequence[Integer]] = (),
 
 def post_vectorize(positionals: Union[Integer, Sequence[Integer]] = ()):
     return post_process(positionals, transform=lambda arg: _vectorize(arg))
+
+
+def pre_listify(positionals: Union[Integer, Sequence[Integer]] = (),
+                keywords: Union[String, Sequence[String]] = ()):
+    return pre_process(positionals, keywords, transform=lambda arg: _listify(arg))
+
+
+def post_listify(positionals: Union[Integer, Sequence[Integer]] = ()):
+    return post_process(positionals, transform=lambda arg: _listify(arg))
 
 
 # ------------------------------------

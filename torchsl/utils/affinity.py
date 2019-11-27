@@ -9,7 +9,7 @@ import torch
 __all__ = ['affinity']
 
 
-def barycenter_weights(X, Z, reg=1e-3):
+def _barycenter_weights(X, Z, reg=1e-3):
     n_samples, n_neighbors = X.shape[0], Z.shape[1]
     B = np.empty((n_samples, n_neighbors), dtype=X.dtype)
     v = np.ones(n_neighbors, dtype=X.dtype)
@@ -27,7 +27,7 @@ def barycenter_weights(X, Z, reg=1e-3):
     return B
 
 
-def row_norm(af_mat):
+def _row_norm(af_mat):
     for _ in range(af_mat.shape[0]):
         af_mat[_] = af_mat[_] / torch.sum(af_mat[_])
     return af_mat
@@ -37,9 +37,9 @@ def affinity(X,
              algo='lle',
              n_neighbors=5,
              epsilon='auto',
-             kernel='rbf', gamma=1,
+             kernel='rbf', gamma=1, theta=1,
              lle_diag_fill=False,
-             auto_row_norm=True,
+             row_norm=True,
              n_jobs=-1):
     """
     Compute the affinity matrix.
@@ -51,7 +51,7 @@ def affinity(X,
     :param kernel:
     :param gamma:
     :param lle_diag_fill:
-    :param auto_row_norm:
+    :param row_norm:
     :param n_jobs:
     :return:
     """
@@ -65,7 +65,7 @@ def affinity(X,
         X = knn._fit_X
         n_samples = X.shape[0] - 1
         ind = knn.kneighbors(X, return_distance=False)[:-1, 1:]
-        data = barycenter_weights(X[:-1, :], X[ind])
+        data = _barycenter_weights(X[:-1, :], X[ind])
         indptr = np.arange(0, n_samples * n_neighbors + 1, n_neighbors)
         af_mat = torch.from_numpy(csr_matrix((data.ravel(), ind.ravel(), indptr),
                                              shape=(n_samples, n_samples)).todense()).float()
@@ -91,7 +91,7 @@ def affinity(X,
                         break
         # af_mat = torch.from_numpy(csr_matrix((data.ravel(), ind.ravel(), indptr),
         #                                      shape=(n_samples, n_samples)).todense()).float()
-        return row_norm(af_mat) if auto_row_norm else af_mat
+        return _row_norm(af_mat) if row_norm else af_mat
 
     elif algo == 'epsilon':
         # epsilon nearest neighbors
@@ -107,7 +107,7 @@ def affinity(X,
             for j in range(n_samples + 1):
                 if ind[i, j] < n_samples and dist[i, j] <= epsilon:
                     af_mat[i, ind[i, j]] = 1
-        return row_norm(af_mat) if auto_row_norm else af_mat
+        return _row_norm(af_mat) if row_norm else af_mat
 
     elif algo == 'kernel':
         # heat kernel (rbf or laplacian)
@@ -118,20 +118,8 @@ def affinity(X,
             elif kernel == 'laplacian':
                 kernel = laplacian_kernel
         # else predefined kernel func
-        af_mat = torch.from_numpy(kernel(X, gamma=gamma)).float()
+        af_mat = torch.from_numpy(kernel(X, gamma=gamma)).float() / theta
         if n_neighbors > 0:
-            mask = affinity(X, algo='knn', n_neighbors=n_neighbors, auto_row_norm=False, n_jobs=n_jobs)
+            mask = affinity(X, algo='knn', n_neighbors=n_neighbors, row_norm=False, n_jobs=n_jobs)
             af_mat *= mask
-        return row_norm(af_mat) if auto_row_norm else af_mat
-
-
-if __name__ == '__main__':
-    import torch
-    import numpy as np
-    import matplotlib.pyplot as plt
-    torch.random.manual_seed(117)
-    X = torch.rand(50, 4) * 5
-    aff_mat = affinity(X, algo='kernel', kernel='rbf', n_neighbors=-1, lle_diag_fill=False, auto_row_norm=False).numpy()
-    plt.imshow(np.abs(aff_mat))
-    plt.show()
-    # plt.savefig('kernel.jpg')
+        return _row_norm(af_mat) if row_norm else af_mat

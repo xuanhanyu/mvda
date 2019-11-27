@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     def main():
         import synthetics
-        from data_visualizer import DataVisualizer
+        from torchsl.utils.data_visualizer import DataVisualizer
         dv = DataVisualizer()
 
         mv_Xs, y = synthetics.random_dataset()

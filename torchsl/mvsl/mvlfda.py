@@ -10,7 +10,7 @@ class MvLFDA(BaseMvDAlgo):
                  ep_implementation='pytorch',
                  reg='auto',
                  kernels=None,
-                 affinity_type='kernel',
+                 affinity_type='lle',
                  n_neighbors=5,
                  epsilon='auto',
                  affinity_kernel='rbf',

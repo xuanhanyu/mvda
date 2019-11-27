@@ -121,7 +121,7 @@ if __name__ == '__main__':
         mv_Ys = [[Y[:, :2] for Y in Ys] for Ys in mv_Ys]
 
         # plot
-        from data_visualizer import DataVisualizer
+        from torchsl.utils.data_visualizer import DataVisualizer
         dv = DataVisualizer()
         dv.mv_scatter(mv_Ks, y)
         dv.mv_scatter(mv_Ys, y)

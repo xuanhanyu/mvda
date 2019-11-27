@@ -1,13 +1,10 @@
-from torchsl import *
 from dataset.mica_gesture import MultiviewMicaGestureDataset
-from data_visualizer import DataVisualizer
+from torchsl.utils import DataVisualizer
 from sklearn.manifold.t_sne import TSNE
-from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 from dataset.utils import join_multiview_datasets
 import numpy as np
-import torch
 
 
 def summary(classification_scores):

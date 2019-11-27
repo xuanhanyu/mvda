@@ -1,4 +1,3 @@
-from torchsl import *
 import synthetics
 import torch
 
@@ -16,7 +15,7 @@ if __name__ == '__main__':
     Ys = model.fit_transform(Xs, y)
 
     # plot
-    from data_visualizer import DataVisualizer
+    from torchsl.utils.data_visualizer import DataVisualizer
     dv = DataVisualizer()
     dv.mv_scatter(Xs, y)
     dv.mv_scatter(Ys, y)

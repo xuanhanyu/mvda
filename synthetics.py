@@ -25,7 +25,7 @@ def rvs(dim=3, seed=None):
     return H
 
 
-def random_dataset(n_classes=5, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=None):
+def random_dataset(n_classes=3, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=None):
     np.random.seed(seed)
     n_samples = n_classes * 20 if n_samples == 'auto' else n_samples
     X_ori, y = make_blobs(n_features=n_features, centers=n_classes, n_samples=n_samples)
@@ -42,7 +42,9 @@ def random_dataset(n_classes=5, n_views=3, n_features=3, n_samples='auto', rotat
         y = y[indexes]
         for _ in range(n_views):
             Xs[_] = Xs[_][indexes, :]
-    return [torch.tensor(X).float() for X in Xs], y
+    if n_views > 1:
+        return torch.stack([torch.tensor(X).float() for X in Xs]), y
+    return torch.tensor(Xs).squeeze(0).float(), y
 
 
 def single_blob_dataset(n_classes=3, n_views=3, n_features=3, n_samples='auto', rotate=True, shuffle=True, seed=156):

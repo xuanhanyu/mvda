@@ -1,44 +1,21 @@
-import discriminant_analysis as da
-import numpy as np
-import torch
-from torchsl.sl import LDA
+from torchsl.sl import *
 from sklearn.datasets import make_blobs
+from sklearn.manifold.t_sne import TSNE
+from torchsl.utils import DataVisualizer
+from synthetics import random_dataset
+import numpy as np
 
 
 def main():
-    print('LDA')
-    X, y = make_blobs(n_features=3, centers=3, n_samples=100)
-    y_unique = np.unique(y)
-    ws = [torch.tensor(X[np.where(y == y_unique[i])[0]]) for i in range(len(y_unique))]
+    X, y = make_blobs(n_features=2, centers=3, n_samples=100, random_state=135)
+    y[np.where(y == 2)] = 1
+    dv = DataVisualizer(embed_algo=TSNE)
 
-    # U
-    us, u = da.class_means(ws)
-    # SW
-    SWs, SW = da.within_class_vars(ws, us)
-    # SB
-    SBs, SB = da.between_class_vars(ws, us)
-
-    # SlB = da.local_between_class_vars(ws, us)
-
-    # W
-    W = SW.inverse() @ SB
-    # V:
-    eigen_vals, eigen_vecs = da.eigen(W)
-    V = da.projection(eigen_vecs, 2)
-
-    # y:
-    ys = [torch.mm(w_l, V) for w_l in ws]
-
-    from data_visualizer import DataVisualizer
-    dv = DataVisualizer()
-    # dv.scatter(ws)
-    # dv.scatter(ys)
-
-    model = LDA(n_components=2, ep_algo='ldax', kernel=None)
+    model = LFDA(n_components=1, ep_algo='eigen', kernel=None, n_neighbors=5)
     Y = model.fit_transform(X, y)
     dv.scatter(X, y)
     dv.scatter(Y, y)
-    dv.show()
+    dv.show(grids=[(1, 2, 0), (1, 2, 1)], title='LDA')
 
 
 if __name__ == '__main__':
