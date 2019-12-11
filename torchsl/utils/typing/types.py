@@ -14,4 +14,7 @@ NumpyArray = ndarray
 Tensor = torch.Tensor
 Tensorizable = Union[torch.Tensor, NumpyArray]
 Dtype = torch.dtype
-Device = torch.device
+Device = Union[torch.device, String]
+
+Variable = torch.autograd.Variable
+Parameter = torch.nn.Parameter

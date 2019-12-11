@@ -1,4 +1,4 @@
-from .bases import BaseMvDAlgo
+from .bases import EOBasedMvSLAlgo
 from .objectives import MvDAInterScatter, CommonComponent, DifferingClass
 from .mvda import MvDA
 
@@ -27,7 +27,7 @@ class MvCCDA(MvDA):
         self.Sb = self._Sb_()
 
 
-class MvDCCCDA(BaseMvDAlgo):
+class MvDCCCDA(EOBasedMvSLAlgo):
 
     def __init__(self,
                  n_components='auto',

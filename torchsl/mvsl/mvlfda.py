@@ -1,8 +1,8 @@
-from .bases import BaseMvDAlgo
+from .bases import EOBasedMvSLAlgo
 from .objectives import MvLFDAIntraScatter, MvLFDAInterScatter, ViewConsistency, Regularization
 
 
-class MvLFDA(BaseMvDAlgo):
+class MvLFDA(EOBasedMvSLAlgo):
 
     def __init__(self,
                  n_components='auto',

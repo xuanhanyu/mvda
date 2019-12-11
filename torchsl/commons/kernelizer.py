@@ -1,7 +1,7 @@
-from sklearn.metrics import pairwise
 from ..bases import Fittable
-from .tensorutils import TensorUser, pre_vectorize, post_tensorize
-from .typing import *
+from ..utils.tensorutils import TensorUser, pre_vectorize, post_tensorize
+from ..utils.typing import *
+from sklearn.metrics import pairwise
 import torch
 
 
@@ -36,7 +36,7 @@ def _get_kernel_func(kernel: Union[Callable, String]) -> Tuple[Callable, bool]:
             # Precomputed
             kernel = lambda x, l: x
         else:
-            raise AttributeError('Undefined kernel type \"{}\"'.format(kernel))
+            raise AttributeError('Unknown kernel type \"{}\"'.format(kernel))
     elif callable(kernel):
         pass
     return kernel, use_kernel
@@ -48,19 +48,20 @@ def _get_kernel_func(kernel: Union[Callable, String]) -> Tuple[Callable, bool]:
 class Kernelizer(Fittable, TensorUser):
 
     def __init__(self, kernel: Union[Callable, String]):
-        super(Kernelizer, self).__init__()
+        Fittable.__init__(self)
+        TensorUser.__init__(self)
         self.kernel: Callable = kernel
         self._L: Optional[Tensorizable] = None
         self.status: bool = True
         self.is_fit: bool = False
 
-    def _infer_kernel_func(self, X: Tensor) -> None:
+    def _infer_kernel_func(self) -> None:
         self.kernel, self.status = _get_kernel_func(self.kernel)
 
     @pre_vectorize(positionals=1)
     def fit(self, X: Tensorizable) -> 'Kernelizer':
         if not self.is_fit:
-            self._infer_kernel_func(X)
+            self._infer_kernel_func()
             self.is_fit = True
         self._L = X.data.clone() if self.status else None
         return self
@@ -80,7 +81,8 @@ class Kernelizer(Fittable, TensorUser):
 class MvKernelizer(Fittable, TensorUser):
 
     def __init__(self, kernels: Union[Callable, String, Sequence[Callable], Sequence[String]]):
-        super(MvKernelizer, self).__init__()
+        Fittable.__init__(self)
+        TensorUser.__init__(self)
         self.kernels: Sequence[Callable] = kernels
         self._Ls: Optional[Sequence[Optional[Tensorizable]]] = None
         self.n_views: Optional[Integer] = None

@@ -1,12 +1,12 @@
-from .bases import BaseMvDObjective
-from ..utils import affinity
+from .bases import BaseMvSLObjective
+from ..commons import affinity
 import torch
 
 
 # ------------------------------------
 # MvDA
 # ------------------------------------
-class MvDAIntraScatter(BaseMvDObjective):
+class MvDAIntraScatter(BaseMvSLObjective):
 
     def __init__(self):
         super(MvDAIntraScatter, self).__init__(predicate='minimize')
@@ -32,7 +32,7 @@ class MvDAIntraScatter(BaseMvDObjective):
         return torch.cat(S_cols, dim=0)
 
 
-class MvDAInterScatter(BaseMvDObjective):
+class MvDAInterScatter(BaseMvSLObjective):
 
     def __init__(self):
         super(MvDAInterScatter, self).__init__(predicate='maximize')
@@ -57,7 +57,7 @@ class MvDAInterScatter(BaseMvDObjective):
 # ------------------------------------
 # MvDA-vc
 # ------------------------------------
-class ViewConsistency(BaseMvDObjective):
+class ViewConsistency(BaseMvSLObjective):
 
     def __init__(self, reg='auto'):
         super(ViewConsistency, self).__init__(predicate='minimize')
@@ -100,7 +100,7 @@ class ViewConsistency(BaseMvDObjective):
 # ------------------------------------
 # Class Separating
 # ------------------------------------
-class ClassSeparating(BaseMvDObjective):
+class ClassSeparating(BaseMvSLObjective):
 
     def __init__(self):
         super(ClassSeparating, self).__init__(predicate='maximize')
@@ -127,7 +127,7 @@ class ClassSeparating(BaseMvDObjective):
 # ------------------------------------
 # MvLFDA
 # ------------------------------------
-class MvLFDAIntraScatter(BaseMvDObjective):
+class MvLFDAIntraScatter(BaseMvSLObjective):
 
     def __init__(self,
                  affinity_type='lle',
@@ -174,7 +174,7 @@ class MvLFDAIntraScatter(BaseMvDObjective):
         return (1.0 - self.lambda_lc) * W + self.lambda_lc * affinity(self._Xs[j], **self.affinity_params)
 
 
-class MvLFDAInterScatter(BaseMvDObjective):
+class MvLFDAInterScatter(BaseMvSLObjective):
 
     def __init__(self,
                  affinity_type='lle',
@@ -222,7 +222,7 @@ class MvLFDAInterScatter(BaseMvDObjective):
 # ------------------------------------
 # MvCCDA
 # ------------------------------------
-class CommonComponent(BaseMvDObjective):
+class CommonComponent(BaseMvSLObjective):
 
     def __init__(self):
         super(CommonComponent, self).__init__(predicate='minimize')
@@ -249,7 +249,7 @@ class CommonComponent(BaseMvDObjective):
         return torch.cat(S_cols, dim=0)
 
 
-class DifferingClass(BaseMvDObjective):
+class DifferingClass(BaseMvSLObjective):
 
     def __init__(self):
         super(DifferingClass, self).__init__(predicate='maximize')
@@ -279,7 +279,7 @@ class DifferingClass(BaseMvDObjective):
 # ------------------------------------
 # Regularizer
 # ------------------------------------
-class Regularization(BaseMvDObjective):
+class Regularization(BaseMvSLObjective):
 
     def __init__(self):
         super(Regularization, self).__init__(predicate='minimize')

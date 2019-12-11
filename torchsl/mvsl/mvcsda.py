@@ -1,8 +1,8 @@
-from .bases import BaseMvDAlgo
+from .bases import EOBasedMvSLAlgo
 from .objectives import MvDAInterScatter, MvDAIntraScatter, ClassSeparating
 
 
-class MvCSDA(BaseMvDAlgo):
+class MvCSDA(EOBasedMvSLAlgo):
 
     def __init__(self,
                  n_components='auto',
@@ -27,7 +27,7 @@ class MvCSDA(BaseMvDAlgo):
         return self.cso.target()
 
 
-class MvDAplusCS(BaseMvDAlgo):
+class MvDAplusCS(EOBasedMvSLAlgo):
 
     def __init__(self,
                  n_components='auto',

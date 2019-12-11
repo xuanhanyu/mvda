@@ -1,8 +1,8 @@
-from .bases import BaseSLAlgo
+from .bases import EOBasedSLAlgo
 from .objectives import LFDAIntraScatter, LFDAInterScatter, LFDALLEIntraScatter, LFDALLEInterScatter
 
 
-class LFDA(BaseSLAlgo):
+class LFDA(EOBasedSLAlgo):
 
     def __init__(self,
                  n_components='auto',
@@ -40,7 +40,7 @@ class LFDA(BaseSLAlgo):
         return self.sbo.target()
 
 
-class LFDALLE(BaseSLAlgo):
+class LFDALLE(EOBasedSLAlgo):
 
     def __init__(self,
                  n_components='auto',

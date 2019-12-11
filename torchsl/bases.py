@@ -1,13 +1,16 @@
+from .utils.typing import *
+from .utils.tensorutils import pre_tensorize
 
 
 # ------------------------------------
 # Abstracts
 # ------------------------------------
 class ResourcesPreparer:
-    def __init__(self, **kwargs):
-        self.sharable_resources = set()
+    def __init__(self, sharable_resources=(), **kwargs):
+        self.sharable_resources = set(sharable_resources)
         self.dependents = set()
         self.is_prepared = False
+        self._should_reprepare = True
 
     def set_sharable_resources(self, sharable_resources):
         self.sharable_resources = sharable_resources
@@ -30,13 +33,20 @@ class ResourcesPreparer:
         self.is_prepared = True
         self.auto_chain()
         for dependent in self.dependents:
+            dependent.__should_reprepare = False
             dependent._prepare_from_(self)
+            dependent.__should_reprepare = True
 
     def _prepare_(self, *args, **kwargs):
+        pass
+
+    def _post_prepare_(self):
         self.is_prepared = True
         self.auto_chain()
         for dependent in self.dependents:
+            dependent.__should_reprepare = False
             dependent._prepare_from_(self)
+            dependent.__should_reprepare = True
 
     def check_prepared(self):
         valid = self.is_prepared
@@ -51,8 +61,9 @@ class Fittable:
 
 
 class BaseAlgo(ResourcesPreparer, Fittable):
-    def __init__(self, **kwargs):
-        super(BaseAlgo, self).__init__()
+    def __init__(self, sharable_resources=(), **kwargs):
+        ResourcesPreparer.__init__(self, sharable_resources=sharable_resources)
+        Fittable.__init__(self)
         self.dependencies = set()
 
     def auto_chain(self):
@@ -71,3 +82,46 @@ class BaseAlgo(ResourcesPreparer, Fittable):
         self.is_fit = True
         for dependency in self.dependencies:
             dependency._fit_()
+
+
+# ------------------------------------
+# Metas
+# ------------------------------------
+class MetaEOBasedAlgo(type):
+
+    def __init__(cls, name, bases, attr):
+        for func in ['fit', 'fit_transform']:
+            if func in attr:
+                pretensorized_func = pre_tensorize(positionals=1, dtype=torch.float)(
+                    pre_tensorize(positionals=(2, 3), keywords='y_unique', dtype=torch.long)(attr[func])
+                )
+                setattr(cls, func, pretensorized_func)
+        for func in ['transform']:
+            if func in attr:
+                pretensorized_func = pre_tensorize(positionals=1, dtype=torch.float)(attr[func])
+                setattr(cls, func, pretensorized_func)
+
+
+class MetaGradientBasedAlgo(type):
+
+    @staticmethod
+    def prepare(cls, func):
+        def wrapper(*args, **kwargs):
+            if hasattr(cls, '_prepare_'):
+                getattr(cls, '_prepare_')(*args, **kwargs)
+            return func(*args, **kwargs)
+        return wrapper
+
+    def __init__(cls, name, bases, attr):
+        for func in ['forward']:
+            if func in attr:
+                pretensorized_func = pre_tensorize(positionals=1, dtype=torch.float, requires_grad=None)(
+                    pre_tensorize(positionals=(2, 3), keywords='y_unique', dtype=torch.long)(
+                        MetaGradientBasedAlgo.prepare(cls, attr[func])
+                    )
+                )
+                setattr(cls, func, pretensorized_func)
+        for func in ['transform']:
+            if func in attr:
+                pretensorized_func = pre_tensorize(positionals=1, dtype=torch.float)(attr[func])
+                setattr(cls, func, pretensorized_func)

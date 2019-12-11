@@ -37,7 +37,7 @@ if __name__ == '__main__':
     Xs_all, y_all = join_multiview_datasets([Xs_train, Xs_test], [y_train, y_test])
     dv.mv_scatter(Xs_all, y_all, title='Original space')
 
-    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDAvc(n_components=2, ep_algo='eigen', kernels='linear'),
+    mv_scores1, Ys_train, Ys_test = eval_multiview_model(mvmodel=MvDA(n_components=2, ep_algo='eigen', kernels='linear'),
                                                          clf=KNeighborsClassifier(),
                                                          Xs_train=Xs_train, y_train=y_train,
                                                          Xs_test=Xs_test, y_test=y_test,

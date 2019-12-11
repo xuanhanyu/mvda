@@ -1,8 +1,8 @@
-from .bases import BaseSLAlgo
+from .bases import EOBasedSLAlgo
 from .objectives import LDAIntraScatter, LDAInterScatter
 
 
-class LDA(BaseSLAlgo):
+class LDA(EOBasedSLAlgo):
 
     def __init__(self,
                  n_components='auto',

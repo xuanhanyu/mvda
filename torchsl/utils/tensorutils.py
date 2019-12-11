@@ -23,7 +23,8 @@ def _tensor_type(mat: Any):
 
 def _tensorize(mat: Any,
                dtype: Optional[Dtype] = None,
-               device: Optional[Device] = None) -> Union[Tensor, Any]:
+               device: Optional[Device] = None,
+               requires_grad: Optional[Boolean] = None) -> Union[Tensor, Any]:
     if mat is None:
         pass
     elif torch.is_tensor(mat):
@@ -31,9 +32,11 @@ def _tensorize(mat: Any,
     elif isinstance(mat, np.ndarray):
         mat = torch.from_numpy(mat).to(dtype=dtype, device=device)
     elif hasattr(mat, '__iter__'):
-        return torch.stack([_tensorize(_) for _ in mat]).to(dtype=dtype, device=device)
+        mat = torch.stack([_tensorize(_) for _ in mat]).to(dtype=dtype, device=device)
     else:
         mat = torch.tensor(mat, dtype=dtype, device=device)
+    if requires_grad is not None and mat is not None and mat.dtype in [torch.float, torch.double]:
+        mat.requires_grad = requires_grad
     return mat
 
 
@@ -77,9 +80,25 @@ def _listify(mat: Tensorizable):
 # ------------------------------------
 # Decorators
 # ------------------------------------
+# class SelfArg:
+#     def __init__(self, retriever):
+#         self.retriever = retriever
+#
+#     def __call__(self, obj):
+#         return self.retriever(obj)
+#
+#     @staticmethod
+#     def unpack(obj, args: Dict):
+#         for arg in args:
+#             retr = args[arg]
+#             if isinstance(retr, SelfArg):
+#                 args[arg] = retr(obj)
+
+
 def pre_process(positionals: Union[Integer, Sequence[Integer]] = (),
                 keywords: Union[String, Sequence[String]] = (),
-                transform: Callable = lambda arg: arg):
+                transform: Callable = lambda arg: arg,
+                transform_args: Dict = {}):
     if not hasattr(positionals, '__iter__'):
         positionals = [positionals]
     if not hasattr(keywords, '__iter__') or isinstance(keywords, str):
@@ -90,10 +109,10 @@ def pre_process(positionals: Union[Integer, Sequence[Integer]] = (),
             args = list(args)
             for positional in positionals:
                 if len(args) > positional:
-                    args[positional] = transform(args[positional])
+                    args[positional] = transform(args[positional], **transform_args)
             for keyword in keywords:
                 if keyword in kwargs:
-                    kwargs[keyword] = transform(kwargs[keyword])
+                    kwargs[keyword] = transform(kwargs[keyword], **transform_args)
             return func(*args, **kwargs)
 
         return wrapper
@@ -102,7 +121,8 @@ def pre_process(positionals: Union[Integer, Sequence[Integer]] = (),
 
 
 def post_process(positionals: Union[Integer, Sequence[Integer]] = (),
-                 transform: Callable = lambda arg: arg):
+                 transform: Callable = lambda arg: arg,
+                 transform_args: Dict = {}):
     if not hasattr(positionals, '__iter__'):
         positionals = [positionals]
 
@@ -113,7 +133,7 @@ def post_process(positionals: Union[Integer, Sequence[Integer]] = (),
                 ret = list(ret)
                 for positional in positionals:
                     if len(ret) > positional:
-                        ret[positional] = transform(ret[positional])
+                        ret[positional] = transform(ret[positional], **transform_args)
                 return tuple(ret)
             return transform(ret)
 
@@ -171,8 +191,10 @@ def post_numpify(positionals: Union[Integer, Sequence[Integer]] = (),
 def pre_tensorize(positionals: Union[Integer, Sequence[Integer]] = (),
                   keywords: Union[String, Sequence[String]] = (),
                   dtype: Optional[Dtype] = None,
-                  device: Optional[Device] = None):
-    return pre_process(positionals, keywords, transform=lambda arg: _tensorize(arg, dtype=dtype, device=device))
+                  device: Optional[Device] = None,
+                  requires_grad: Optional[Boolean] = None):
+    return pre_process(positionals, keywords,
+                       transform=lambda arg: _tensorize(arg, dtype=dtype, device=device, requires_grad=requires_grad))
 
 
 def post_tensorize(positionals: Union[Integer, Sequence[Integer]] = (),
@@ -203,10 +225,43 @@ def post_listify(positionals: Union[Integer, Sequence[Integer]] = ()):
 # Classes
 # ------------------------------------
 class TensorUser:
-    def _tensorize_(self, mat: Any,
-                    dtype: Optional[Dtype] = None,
-                    device: Optional[Device] = None) -> Tensor:
-        return _tensorize(mat, dtype=dtype, device=device)
+    def __init__(self, reg: Union[Number, String] = 'auto',
+                 device: Optional[Device] = None,
+                 requires_grad: Boolean = None):
+        self.reg: Union[Number, String] = reg
+        self.device: Optional[Device] = device
+        self.requires_grad: bool = requires_grad
 
-    def _vectorize_(self, mat: Any):
+    def _tensorize(self, mat: Any,
+                   dtype: Optional[Dtype] = None) -> Tensor:
+        return _tensorize(mat, dtype=dtype, device=self.device, requires_grad=self.requires_grad)
+
+    def _numpify(self, mat: Any,
+                 dtype: Optional[Dtype] = None) -> NumpyArray:
+        return _numpify(mat, dtype=dtype)
+
+    def _vectorize(self, mat: Any):
         return _vectorize(mat)
+
+    def _listify(self, mat: Tensorizable):
+        return _listify(mat)
+
+    @pre_vectorize(positionals=1)
+    def _regularize(self, mat: Any):
+        if torch.is_tensor(mat):
+            if self.reg == 'auto':
+                diag = torch.trace(mat)
+                if diag == 0:
+                    diag = 1e-5
+                I_reg = torch.eye(mat.shape[0]) * diag * 1e-4
+            else:
+                I_reg = torch.eye(mat.shape[0]) * self.reg
+        else:
+            if self.reg == 'auto':
+                diag = np.trace(mat)
+                if diag == 0:
+                    diag = 1e-5
+                I_reg = np.eye(mat.shape[0]) * diag * 1e-4
+            else:
+                I_reg = np.eye(mat.shape[0]) * self.reg
+        return mat + I_reg

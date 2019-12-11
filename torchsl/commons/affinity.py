@@ -121,5 +121,9 @@ def affinity(X,
         af_mat = torch.from_numpy(kernel(X, gamma=gamma)).float() / theta
         if n_neighbors > 0:
             mask = affinity(X, algo='knn', n_neighbors=n_neighbors, row_norm=False, n_jobs=n_jobs)
+            mask -= torch.eye(mask.shape[0])
+            print(af_mat[0])
+            print(mask[0])
+            print()
             af_mat *= mask
         return _row_norm(af_mat) if row_norm else af_mat

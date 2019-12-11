@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
         # plot
         dv.mv_scatter(mv_Xs, y)
-        dv.show(False)
+        dv.show(block=False)
 
         criterion = MvDALoss()
         optim = torch.optim.Adam(mvdnet.parameters(), lr=1e-3)
